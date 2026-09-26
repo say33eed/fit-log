@@ -1,38 +1,56 @@
 "use client";
 
+import toast from "react-hot-toast";
 import {
-  Bookmark,
-  CalendarCheck,
-  CalendarPlus,
+    Bookmark,
+    CalendarCheck,
+    CalendarPlus,
 } from "lucide-react";
 
 import { useWorkout } from "@/context/WorkoutContext";
 import type { Workout } from "@/types/workout";
 
 interface WorkoutActionsProps {
-  workout: Workout;
+    workout: Workout;
 }
 
 export default function WorkoutActions({
-  workout,
+    workout,
 }: WorkoutActionsProps) {
-  const {
-    addToPlan,
-    toggleSaved,
-    isInPlan,
-    isSaved,
-  } = useWorkout();
+    const {
+        addToPlan,
+        toggleSaved,
+        isInPlan,
+        isSaved,
+    } = useWorkout();
 
-  const inPlan = isInPlan(workout.id);
-  const saved = isSaved(workout.id);
+    const inPlan = isInPlan(workout.id);
+    const saved = isSaved(workout.id);
 
-  return (
-    <div className="mt-7 flex flex-col gap-3 md:flex-row">
-      <button
-        type="button"
-        onClick={() => addToPlan(workout)}
-        disabled={inPlan}
-        className="
+    const handleAddToPlan = () => {
+        if (inPlan) return;
+
+        addToPlan(workout);
+        toast.success("Added to today's plan");
+    };
+
+    const handleToggleSaved = () => {
+        toggleSaved(workout);
+
+        if (saved) {
+            toast.success("Removed from saved");
+        } else {
+            toast.success("Saved for later");
+        }
+    };
+
+    return (
+        <div className="mt-7 flex flex-col gap-3 md:flex-row">
+            <button
+                type="button"
+                onClick={handleAddToPlan}
+                disabled={inPlan}
+                className="
           inline-flex
           h-[44px]
           w-full
@@ -51,20 +69,20 @@ export default function WorkoutActions({
           disabled:brightness-75
           md:w-auto
         "
-      >
-        {inPlan ? (
-          <CalendarCheck size={17} strokeWidth={2} />
-        ) : (
-          <CalendarPlus size={17} strokeWidth={2} />
-        )}
+            >
+                {inPlan ? (
+                    <CalendarCheck size={17} strokeWidth={2} />
+                ) : (
+                    <CalendarPlus size={17} strokeWidth={2} />
+                )}
 
-        {inPlan ? "Added to today's plan" : "Add to today's plan"}
-      </button>
+                {inPlan ? "Added to today's plan" : "Add to today's plan"}
+            </button>
 
-      <button
-        type="button"
-        onClick={() => toggleSaved(workout)}
-        className={`
+            <button
+                type="button"
+                onClick={handleToggleSaved}
+                className={`
           inline-flex
           h-[44px]
           w-full
@@ -78,21 +96,20 @@ export default function WorkoutActions({
           font-medium
           transition
           md:w-auto
-          ${
-            saved
-              ? "border-[#CCFF00] bg-[#CCFF00]/10 text-[#CCFF00]"
-              : "border-[#5A5E67] bg-transparent text-[#F4F4F5] hover:bg-white/[0.04]"
-          }
+          ${saved
+                        ? "border-[#CCFF00] bg-[#CCFF00]/10 text-[#CCFF00]"
+                        : "border-[#5A5E67] bg-transparent text-[#F4F4F5] hover:bg-white/[0.04]"
+                    }
         `}
-      >
-        <Bookmark
-          size={16}
-          strokeWidth={2}
-          fill={saved ? "currentColor" : "none"}
-        />
+            >
+                <Bookmark
+                    size={16}
+                    strokeWidth={2}
+                    fill={saved ? "currentColor" : "none"}
+                />
 
-        {saved ? "Saved" : "Save for later"}
-      </button>
-    </div>
-  );
+                {saved ? "Saved" : "Save for later"}
+            </button>
+        </div>
+    );
 }

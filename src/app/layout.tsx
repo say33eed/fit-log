@@ -1,3 +1,4 @@
+import { Toaster } from "react-hot-toast";
 import type { Metadata } from "next";
 import { Inter, Oswald } from "next/font/google";
 import "./globals.css";
@@ -29,6 +30,18 @@ export default function RootLayout({
       <body className={`${inter.variable} ${oswald.variable}`}>
         <WorkoutProvider>
           {children}
+
+          <Toaster
+            position="top-right"
+            toastOptions={{
+              duration: 2500,
+              style: {
+                background: "#191C22",
+                color: "#F4F4F5",
+                border: "1px solid #292D35",
+              },
+            }}
+          />
         </WorkoutProvider>
       </body>
     </html>
