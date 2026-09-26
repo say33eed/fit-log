@@ -22,6 +22,7 @@ import { useWorkout } from "@/context/WorkoutContext";
 import type { Workout } from "@/types/workout";
 
 type Tab = "plan" | "saved";
+
 type SortOption =
   | "duration"
   | "calories"
@@ -39,12 +40,13 @@ function MyPlanContent() {
   const searchParams = useSearchParams();
 
   /*
-   * Navbar can now control which tab opens:
+   * Navbar controls which tab opens:
    *
-   * /my-plan?tab=plan  -> Today's Plan
-   * /my-plan?tab=saved -> Saved
+   * /my-plan?tab=plan
+   * /my-plan?tab=saved
    *
-   * /my-plan without a query defaults to Plan.
+   * If no tab is supplied, Today's Plan
+   * is selected by default.
    */
   const activeTab: Tab =
     searchParams.get("tab") === "saved"
@@ -58,11 +60,27 @@ function MyPlanContent() {
     useState(false);
 
   /*
-   * Summary always represents Today's Plan,
-   * even while Saved is selected.
+   * Use the currently selected tab's workouts.
+   *
+   * Today's Plan -> plan
+   * Saved        -> saved
+   */
+  const activeWorkouts =
+    activeTab === "plan" ? plan : saved;
+
+  /*
+   * LIVE SUMMARY
+   *
+   * This now calculates from activeWorkouts,
+   * so switching between Today's Plan and Saved
+   * immediately updates:
+   *
+   * - Exercises
+   * - Minutes
+   * - Calories
    */
   const summary = useMemo(() => {
-    return plan.reduce(
+    return activeWorkouts.reduce(
       (total, workout) => {
         total.minutes += workout.duration;
         total.calories +=
@@ -75,11 +93,12 @@ function MyPlanContent() {
         calories: 0,
       }
     );
-  }, [plan]);
+  }, [activeWorkouts]);
 
-  const activeWorkouts =
-    activeTab === "plan" ? plan : saved;
-
+  /*
+   * Sort only the workouts belonging to the
+   * currently active tab.
+   */
   const sortedWorkouts = useMemo(() => {
     return [...activeWorkouts].sort(
       (a, b) => {
@@ -181,7 +200,7 @@ function MyPlanContent() {
           </p>
         </div>
 
-        {/* Summary */}
+        {/* Live summary */}
         <div
           className="
             mt-9
@@ -210,7 +229,7 @@ function MyPlanContent() {
             </p>
 
             <p className="font-display mt-2 text-[34px] font-semibold leading-none text-[#CCFF00]">
-              {plan.length}
+              {activeWorkouts.length}
             </p>
 
             <span
