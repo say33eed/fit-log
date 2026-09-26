@@ -1,23 +1,52 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import Image from "next/image";
+import Link from "next/link";
+import {
+  Check,
+  ChevronDown,
+  Flame,
+  Star,
+  Timer,
+  X,
+} from "lucide-react";
+import toast from "react-hot-toast";
+
 import { useWorkout } from "@/context/WorkoutContext";
 
 type Tab = "plan" | "saved";
 type SortOption = "duration" | "calories" | "rating";
 
 export default function MyPlanPage() {
-  const { plan } = useWorkout();
+  const {
+    plan,
+    saved,
+    isLoaded,
+    removeFromPlan,
+    toggleSaved,
+  } = useWorkout();
 
-  const [activeTab, setActiveTab] = useState<Tab>("plan");
-  const [sortBy, setSortBy] = useState<SortOption>("duration");
-  const [sortOpen, setSortOpen] = useState(false);
+  const [activeTab, setActiveTab] =
+    useState<Tab>("plan");
+
+  const [sortBy, setSortBy] =
+    useState<SortOption>("duration");
+
+  const [sortOpen, setSortOpen] =
+    useState(false);
 
   const sortRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handleOutsideClick = (event: MouseEvent) => {
+    const handleOutsideClick = (
+      event: MouseEvent
+    ) => {
       if (
         sortRef.current &&
         !sortRef.current.contains(event.target as Node)
@@ -26,15 +55,37 @@ export default function MyPlanPage() {
       }
     };
 
-    document.addEventListener("mousedown", handleOutsideClick);
+    document.addEventListener(
+      "mousedown",
+      handleOutsideClick
+    );
 
     return () => {
-      document.removeEventListener("mousedown", handleOutsideClick);
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
     };
   }, []);
 
+  /*
+   * The summary follows the currently selected tab.
+   *
+   * Today's Plan:
+   *   Exercises = plan.length
+   *   Minutes = total plan duration
+   *   Calories = total plan calories
+   *
+   * Saved:
+   *   Exercises = saved.length
+   *   Minutes = total saved duration
+   *   Calories = total saved calories
+   */
+  const summaryWorkouts =
+    activeTab === "plan" ? plan : saved;
+
   const summary = useMemo(() => {
-    return plan.reduce(
+    return summaryWorkouts.reduce(
       (total, workout) => {
         total.minutes += workout.duration;
         total.calories += workout.caloriesBurned;
@@ -46,7 +97,7 @@ export default function MyPlanPage() {
         calories: 0,
       }
     );
-  }, [plan]);
+  }, [summaryWorkouts]);
 
   const sortOptions: {
     value: SortOption;
@@ -67,8 +118,69 @@ export default function MyPlanPage() {
   ];
 
   const selectedSortLabel =
-    sortOptions.find((option) => option.value === sortBy)?.label ??
-    "Duration";
+    sortOptions.find(
+      (option) => option.value === sortBy
+    )?.label ?? "Duration";
+
+  const activeWorkouts =
+    activeTab === "plan" ? plan : saved;
+
+  const sortedWorkouts = useMemo(() => {
+    return [...activeWorkouts].sort((a, b) => {
+      if (sortBy === "duration") {
+        return a.duration - b.duration;
+      }
+
+      if (sortBy === "calories") {
+        return (
+          a.caloriesBurned - b.caloriesBurned
+        );
+      }
+
+      return b.rating - a.rating;
+    });
+  }, [activeWorkouts, sortBy]);
+
+  const handleMarkAsDone = (id: number) => {
+    removeFromPlan(id);
+
+    toast.success("Workout logged — nice work", {
+      duration: 3000,
+      style: {
+        background: "#171A20",
+        color: "#F4F4F5",
+        border: "1px solid #2A2E36",
+        borderRadius: "8px",
+        padding: "12px 14px",
+        fontSize: "14px",
+      },
+      iconTheme: {
+        primary: "#4CCB57",
+        secondary: "#FFFFFF",
+      },
+    });
+  };
+
+  const handleRemoveFromPlan = (
+    id: number,
+    name: string
+  ) => {
+    removeFromPlan(id);
+
+    toast.success(
+      `Removed ${name} from your plan`
+    );
+  };
+
+  const handleRemoveFromSaved = (
+    workout: (typeof saved)[number]
+  ) => {
+    toggleSaved(workout);
+
+    toast.success(
+      `Removed ${workout.name} from saved`
+    );
+  };
 
   return (
     <main className="min-h-screen bg-[#0D0F12] text-[#F4F4F5]">
@@ -80,7 +192,8 @@ export default function MyPlanPage() {
           </h1>
 
           <p className="mt-3 text-[14px] leading-[1.5] text-[#8E929B] md:text-[15px]">
-            Cap of five lifts for today. Finish them, then load more.
+            Cap of five lifts for today. Finish them,
+            then load more.
           </p>
         </div>
 
@@ -98,41 +211,20 @@ export default function MyPlanPage() {
           "
         >
           {/* Exercises */}
-          <div
-            className="
-              px-6
-              py-5
-              md:relative
-              md:px-6
-              md:py-7
-              lg:px-7
-            "
-          >
+          <div className="px-6 py-5 md:relative md:px-6 md:py-7 lg:px-7">
             <p className="text-[12px] text-[#8E929B]">
               Exercises
             </p>
 
             <p className="font-display mt-2 text-[34px] font-semibold leading-none text-[#CCFF00]">
-              {plan.length}
+              {summaryWorkouts.length}
             </p>
 
             <span className="absolute right-0 top-1/2 hidden h-[50px] w-px -translate-y-1/2 bg-[#292D35] md:block" />
           </div>
 
           {/* Minutes */}
-          <div
-            className="
-              border-t
-              border-[#252931]
-              px-6
-              py-5
-              md:relative
-              md:border-t-0
-              md:px-6
-              md:py-7
-              lg:px-7
-            "
-          >
+          <div className="border-t border-[#252931] px-6 py-5 md:relative md:border-t-0 md:px-6 md:py-7 lg:px-7">
             <p className="text-[12px] text-[#8E929B]">
               Minutes
             </p>
@@ -145,18 +237,7 @@ export default function MyPlanPage() {
           </div>
 
           {/* Calories */}
-          <div
-            className="
-              border-t
-              border-[#252931]
-              px-6
-              py-5
-              md:border-t-0
-              md:px-6
-              md:py-7
-              lg:px-7
-            "
-          >
+          <div className="border-t border-[#252931] px-6 py-5 md:border-t-0 md:px-6 md:py-7 lg:px-7">
             <p className="text-[12px] text-[#8E929B]">
               Calories
             </p>
@@ -168,17 +249,7 @@ export default function MyPlanPage() {
         </div>
 
         {/* Tabs + Sort */}
-        <div
-          className="
-            mt-7
-            flex
-            flex-col
-            gap-5
-            md:flex-row
-            md:items-center
-            md:justify-between
-          "
-        >
+        <div className="mt-7 flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
           {/* Tabs */}
           <div
             className="
@@ -246,18 +317,7 @@ export default function MyPlanPage() {
           </div>
 
           {/* Sort */}
-          <div
-            className="
-              flex
-              w-full
-              flex-col
-              gap-2
-              md:w-auto
-              md:flex-row
-              md:items-center
-              md:gap-3
-            "
-          >
+          <div className="flex w-full flex-col gap-2 md:w-auto md:flex-row md:items-center md:gap-3">
             <span className="text-[14px] text-[#A3A6AD] md:text-[12px]">
               Sort By
             </span>
@@ -266,12 +326,13 @@ export default function MyPlanPage() {
               ref={sortRef}
               className="relative w-full md:w-[112px]"
             >
-              {/* Sort Trigger */}
               <button
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={sortOpen}
-                onClick={() => setSortOpen((open) => !open)}
+                onClick={() =>
+                  setSortOpen((open) => !open)
+                }
                 className={`
                   flex
                   h-[42px]
@@ -308,7 +369,6 @@ export default function MyPlanPage() {
                 />
               </button>
 
-              {/* Sort Dropdown */}
               {sortOpen && (
                 <div
                   role="listbox"
@@ -332,7 +392,8 @@ export default function MyPlanPage() {
                   "
                 >
                   {sortOptions.map((option) => {
-                    const selected = sortBy === option.value;
+                    const selected =
+                      sortBy === option.value;
 
                     return (
                       <button
@@ -369,12 +430,13 @@ export default function MyPlanPage() {
                             <Check
                               size={13}
                               strokeWidth={2}
-                              aria-hidden="true"
                             />
                           )}
                         </span>
 
-                        <span>{option.label}</span>
+                        <span>
+                          {option.label}
+                        </span>
                       </button>
                     );
                   })}
@@ -384,8 +446,249 @@ export default function MyPlanPage() {
           </div>
         </div>
 
-        {/* Workout list goes here */}
-        <div className="mt-6" />
+        {/* Workout List */}
+        <div className="mt-6">
+          {!isLoaded ? (
+            <div className="flex min-h-[220px] items-center justify-center rounded-[16px] border border-[#252931] bg-[#171A20]">
+              <p className="text-[14px] text-[#8E929B]">
+                Loading workouts...
+              </p>
+            </div>
+          ) : sortedWorkouts.length === 0 ? (
+            /* Empty State */
+            <div className="flex min-h-[260px] flex-col items-center justify-center rounded-[16px] border border-[#252931] bg-[#171A20] px-6 text-center md:min-h-[300px]">
+              <h2 className="font-display text-[22px] font-medium uppercase tracking-[0.01em] text-[#F4F4F5]">
+                Nothing Here Yet
+              </h2>
+
+              <p className="mt-3 max-w-[390px] text-[14px] leading-[1.6] text-[#8E929B]">
+                Browse the library and add a lift to
+                get today moving.
+              </p>
+
+              <Link
+                href="/"
+                className="
+                  mt-6
+                  inline-flex
+                  h-[44px]
+                  items-center
+                  justify-center
+                  rounded-full
+                  bg-[#CCFF00]
+                  px-7
+                  text-[13px]
+                  font-bold
+                  text-[#090B0E]
+                  transition
+                  hover:brightness-90
+                "
+              >
+                Go to workouts
+              </Link>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {sortedWorkouts.map((workout) => (
+                <article
+                  key={workout.id}
+                  className="
+                    rounded-[16px]
+                    border
+                    border-[#252931]
+                    bg-[#171A20]
+                    p-4
+                    md:flex
+                    md:min-h-[112px]
+                    md:items-center
+                    md:gap-4
+                  "
+                >
+                  {/* Image */}
+                  <div
+                    className="
+                      relative
+                      aspect-[1.85/1]
+                      w-full
+                      shrink-0
+                      overflow-hidden
+                      rounded-[12px]
+                      bg-[#101216]
+                      md:h-[80px]
+                      md:w-[142px]
+                      md:aspect-auto
+                    "
+                  >
+                    <Image
+                      src={workout.image}
+                      alt={workout.name}
+                      fill
+                      sizes="(max-width: 767px) 100vw, 142px"
+                      className="object-cover object-center"
+                    />
+                  </div>
+
+                  {/* Workout Information */}
+                  <div className="mt-4 min-w-0 md:mt-0">
+                    <h2 className="font-display text-[20px] font-medium uppercase leading-[1.1] tracking-[0.01em] text-[#F4F4F5] md:text-[17px]">
+                      {workout.name}
+                    </h2>
+
+                    <p className="mt-1 text-[13px] leading-none text-[#8E929B] md:text-[12px]">
+                      {workout.equipment}
+                    </p>
+
+                    {/* Stats */}
+                    <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 md:mt-2 md:gap-x-3">
+                      <div className="flex items-center gap-1.5 whitespace-nowrap text-[12px] text-[#C5C7CC]">
+                        <Timer
+                          size={15}
+                          strokeWidth={2}
+                          className="shrink-0 text-[#CCFF00]"
+                        />
+
+                        <span>
+                          {workout.duration} min
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 whitespace-nowrap text-[12px] text-[#C5C7CC]">
+                        <Flame
+                          size={15}
+                          strokeWidth={2}
+                          fill="currentColor"
+                          className="shrink-0 text-[#CCFF00]"
+                        />
+
+                        <span>
+                          {workout.caloriesBurned} kcal
+                        </span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 whitespace-nowrap text-[12px] text-[#C5C7CC]">
+                        <Star
+                          size={15}
+                          strokeWidth={2}
+                          className="shrink-0 text-[#CCFF00]"
+                        />
+
+                        <span>
+                          {workout.rating}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div className="mt-5 flex items-center gap-2 md:ml-auto md:mt-0 md:shrink-0">
+                    <Link
+                      href={`/workout/${workout.id}`}
+                      className="
+                        inline-flex
+                        h-[38px]
+                        items-center
+                        justify-center
+                        whitespace-nowrap
+                        rounded-full
+                        border
+                        border-[#4A505B]
+                        px-5
+                        text-[12px]
+                        font-medium
+                        text-[#F4F4F5]
+                        transition-colors
+                        hover:border-[#747B87]
+                        sm:px-6
+                        md:h-[34px]
+                        md:px-5
+                      "
+                    >
+                      View Details
+                    </Link>
+
+                    {activeTab === "plan" && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleMarkAsDone(
+                            workout.id
+                          )
+                        }
+                        className="
+                          inline-flex
+                          h-[38px]
+                          items-center
+                          justify-center
+                          gap-2
+                          whitespace-nowrap
+                          rounded-full
+                          border
+                          border-[#CCFF00]
+                          bg-[#CCFF00]
+                          px-5
+                          text-[12px]
+                          font-semibold
+                          text-[#090B0E]
+                          transition
+                          hover:brightness-90
+                          sm:px-6
+                          md:h-[34px]
+                          md:px-5
+                        "
+                      >
+                        <Check
+                          size={14}
+                          strokeWidth={2.5}
+                        />
+
+                        Mark as Done
+                      </button>
+                    )}
+
+                    <button
+                      type="button"
+                      aria-label={
+                        activeTab === "plan"
+                          ? `Remove ${workout.name} from plan`
+                          : `Remove ${workout.name} from saved`
+                      }
+                      onClick={() => {
+                        if (activeTab === "plan") {
+                          handleRemoveFromPlan(
+                            workout.id,
+                            workout.name
+                          );
+                        } else {
+                          handleRemoveFromSaved(
+                            workout
+                          );
+                        }
+                      }}
+                      className="
+                        ml-1
+                        inline-flex
+                        h-[34px]
+                        w-[34px]
+                        shrink-0
+                        items-center
+                        justify-center
+                        rounded-full
+                        text-[#777C86]
+                        transition-colors
+                        hover:text-[#F4F4F5]
+                      "
+                    >
+                      <X
+                        size={16}
+                        strokeWidth={1.8}
+                      />
+                    </button>
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </div>
       </section>
     </main>
   );

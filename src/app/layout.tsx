@@ -1,23 +1,15 @@
-import { Toaster } from "react-hot-toast";
 import type { Metadata } from "next";
-import { Inter, Oswald } from "next/font/google";
+import { Toaster } from "react-hot-toast";
+
 import "./globals.css";
+
+import Navbar from "@/components/Navbar";
 import { WorkoutProvider } from "@/context/WorkoutContext";
-
-const inter = Inter({
-  subsets: ["latin"],
-  variable: "--font-inter",
-});
-
-const oswald = Oswald({
-  subsets: ["latin"],
-  variable: "--font-oswald",
-});
 
 export const metadata: Metadata = {
   title: "FitLog | Workout Library",
   description:
-    "A dark, no-nonsense gym companion for planning and logging workouts.",
+    "Build your workout plan and track your lifts with FitLog.",
 };
 
 export default function RootLayout({
@@ -27,18 +19,23 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${inter.variable} ${oswald.variable}`}>
+      <body className="min-h-screen bg-[#0D0F12] text-[#F4F4F5]">
         <WorkoutProvider>
+          <Navbar />
+
           {children}
 
           <Toaster
             position="top-right"
             toastOptions={{
-              duration: 2500,
+              duration: 3000,
               style: {
-                background: "#191C22",
+                background: "#171A20",
                 color: "#F4F4F5",
-                border: "1px solid #292D35",
+                border: "1px solid #2A2E36",
+                borderRadius: "8px",
+                padding: "12px 14px",
+                fontSize: "14px",
               },
             }}
           />

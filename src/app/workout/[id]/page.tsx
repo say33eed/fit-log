@@ -2,7 +2,7 @@ import Image from "next/image";
 import { notFound } from "next/navigation";
 import WorkoutActions from "@/components/WorkoutActions";
 
-import Navbar from "@/components/Navbar";
+// import Navbar from "@/components/Navbar";
 import { getWorkoutById } from "@/lib/api";
 
 interface WorkoutDetailsPageProps {
@@ -36,7 +36,7 @@ export default async function WorkoutDetailsPage({
 
     return (
         <main className="min-h-screen bg-[#0D0F13] text-white">
-            <Navbar />
+            {/* <Navbar /> */}
 
             <section className="px-4 pb-24 pt-8 sm:px-5 md:px-6 md:pt-10 lg:px-8 lg:pt-12">
                 <div

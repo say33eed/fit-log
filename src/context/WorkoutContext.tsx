@@ -13,6 +13,7 @@ import type { Workout } from "@/types/workout";
 interface WorkoutContextType {
   plan: Workout[];
   saved: Workout[];
+  isLoaded: boolean;
   addToPlan: (workout: Workout) => void;
   removeFromPlan: (id: number) => void;
   toggleSaved: (workout: Workout) => void;
@@ -28,7 +29,9 @@ interface WorkoutProviderProps {
   children: ReactNode;
 }
 
-export function WorkoutProvider({ children }: WorkoutProviderProps) {
+export function WorkoutProvider({
+  children,
+}: WorkoutProviderProps) {
   const [plan, setPlan] = useState<Workout[]>([]);
   const [saved, setSaved] = useState<Workout[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -57,14 +60,20 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   useEffect(() => {
     if (!isLoaded) return;
 
-    localStorage.setItem("fitlog-plan", JSON.stringify(plan));
+    localStorage.setItem(
+      "fitlog-plan",
+      JSON.stringify(plan)
+    );
   }, [plan, isLoaded]);
 
-  // Persist saved workouts after initial hydration.
+  // Persist saved workouts after initial localStorage hydration.
   useEffect(() => {
     if (!isLoaded) return;
 
-    localStorage.setItem("fitlog-saved", JSON.stringify(saved));
+    localStorage.setItem(
+      "fitlog-saved",
+      JSON.stringify(saved)
+    );
   }, [saved, isLoaded]);
 
   const addToPlan = (workout: Workout) => {
@@ -83,7 +92,9 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
 
   const removeFromPlan = (id: number) => {
     setPlan((currentPlan) =>
-      currentPlan.filter((workout) => workout.id !== id)
+      currentPlan.filter(
+        (workout) => workout.id !== id
+      )
     );
   };
 
@@ -104,11 +115,15 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
   };
 
   const isInPlan = (id: number) => {
-    return plan.some((workout) => workout.id === id);
+    return plan.some(
+      (workout) => workout.id === id
+    );
   };
 
   const isSaved = (id: number) => {
-    return saved.some((workout) => workout.id === id);
+    return saved.some(
+      (workout) => workout.id === id
+    );
   };
 
   return (
@@ -116,6 +131,7 @@ export function WorkoutProvider({ children }: WorkoutProviderProps) {
       value={{
         plan,
         saved,
+        isLoaded,
         addToPlan,
         removeFromPlan,
         toggleSaved,
