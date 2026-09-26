@@ -1,61 +1,4 @@
-import Image from "next/image";
-import { notFound } from "next/navigation";
-
-import WorkoutActions from "@/components/WorkoutActions";
-import { getWorkoutById } from "@/lib/api";
-
-interface WorkoutDetailsPageProps {
-  params: Promise<{
-    id: string;
-  }>;
-}
-
-export default async function WorkoutDetailsPage({
-  params,
-}: WorkoutDetailsPageProps) {
-  const { id } = await params;
-
-  /*
-   * Workout IDs from the API are positive integers.
-   *
-   * Invalid examples:
-   * /workout/abc
-   * /workout/-1
-   * /workout/0
-   * /workout/1.5
-   *
-   * These should immediately use the global
-   * src/app/not-found.tsx page.
-   */
-  if (!/^\d+$/.test(id) || Number(id) <= 0) {
-    notFound();
-  }
-
-  let workout;
-
-  try {
-    workout = await getWorkoutById(id);
-  } catch {
-    /*
-     * A valid-looking ID can still refer to a workout
-     * that does not exist, such as /workout/999.
-     *
-     * getWorkoutById throwing therefore also sends
-     * the user to the same custom 404 page.
-     */
-    notFound();
-  }
-
-  const specs = [
-    ["Equipment", workout.equipment],
-    ["Difficulty", workout.difficulty],
-    ["Sets", workout.sets],
-    ["Reps", workout.reps],
-    ["Duration", `${workout.duration} min`],
-    ["Calories", `${workout.caloriesBurned} kcal`],
-    ["Rating", workout.rating],
-  ];
-
+export default function WorkoutDetailsLoading() {
   return (
     <main className="min-h-screen bg-[#0D0F13] text-white">
       <section className="px-4 pb-24 pt-8 sm:px-5 md:px-6 md:pt-10 lg:px-8 lg:pt-12">
@@ -70,119 +13,81 @@ export default async function WorkoutDetailsPage({
             lg:gap-12
           "
         >
-          {/* Workout image */}
+          {/* Image skeleton */}
           <div
             className="
-              relative
               aspect-[1.45/1]
               w-full
-              overflow-hidden
+              animate-pulse
               rounded-[16px]
+              bg-[#191C22]
               md:aspect-[3.15/1]
               lg:aspect-[4/5]
             "
-          >
-            <Image
-              src={workout.image}
-              alt={workout.name}
-              fill
-              priority
-              sizes="(max-width: 1023px) 100vw, 50vw"
-              className="object-cover"
-            />
-          </div>
+          />
 
-          {/* Workout information */}
+          {/* Content skeleton */}
           <div className="min-w-0">
-            <h1
-              className="
-                font-display
-                text-[36px]
-                font-medium
-                uppercase
-                leading-[1.08]
-                text-[#F4F4F5]
-                md:text-[40px]
-                lg:text-[42px]
-              "
-            >
-              {workout.name}
-            </h1>
+            {/* Title */}
+            <div className="h-10 w-3/4 animate-pulse rounded-lg bg-[#191C22]" />
 
-            <p className="mt-4 min-h-[50px] max-w-[620px] text-[16px] leading-[1.55] text-[#A5A7AD]">
-              {workout.description}
-            </p>
+            {/* Description */}
+            <div className="mt-5 space-y-3">
+              <div className="h-4 w-full animate-pulse rounded bg-[#191C22]" />
+              <div className="h-4 w-[90%] animate-pulse rounded bg-[#191C22]" />
+            </div>
 
             {/* Muscle groups */}
-            <div className="mt-4 flex flex-wrap gap-2.5">
-              {workout.muscleGroups.map((group) => (
-                <span
-                  key={group}
-                  className="
-                    rounded-full
-                    bg-[#CCFF00]
-                    px-3.5
-                    py-1.5
-                    text-[11px]
-                    font-bold
-                    leading-none
-                    text-[#090B0E]
-                  "
-                >
-                  {group}
-                </span>
-              ))}
+            <div className="mt-5 flex gap-2.5">
+              <div className="h-7 w-20 animate-pulse rounded-full bg-[#191C22]" />
+              <div className="h-7 w-24 animate-pulse rounded-full bg-[#191C22]" />
             </div>
 
             {/* Specs */}
             <div className="mt-7 overflow-hidden rounded-[16px] border border-[#292D35] bg-[#191C22]">
-              {specs.map(([label, value], index) => (
-                <div
-                  key={label}
-                  className={`
-                    px-4
-                    py-4
-                    md:grid
-                    md:grid-cols-2
-                    md:items-center
-                    md:px-5
-                    ${
-                      index !== specs.length - 1
-                        ? "border-b border-[#292D35]"
-                        : ""
-                    }
-                  `}
-                >
-                  <p className="font-display text-[13px] uppercase text-[#A2A5AD]">
-                    {label}
-                  </p>
+              {Array.from({ length: 7 }).map(
+                (_, index) => (
+                  <div
+                    key={index}
+                    className={`
+                      px-4
+                      py-4
+                      md:grid
+                      md:grid-cols-2
+                      md:items-center
+                      md:px-5
+                      ${
+                        index !== 6
+                          ? "border-b border-[#292D35]"
+                          : ""
+                      }
+                    `}
+                  >
+                    <div className="h-4 w-20 animate-pulse rounded bg-[#252931]" />
 
-                  <p className="mt-1 text-[15px] text-[#F0F0F1] md:mt-0">
-                    {value}
-                  </p>
-                </div>
-              ))}
+                    <div className="mt-2 h-4 w-28 animate-pulse rounded bg-[#252931] md:mt-0" />
+                  </div>
+                )
+              )}
             </div>
 
             {/* Instructions */}
             <div className="mt-8">
-              <h2 className="font-display text-[24px] font-medium uppercase text-[#F4F4F5]">
-                INSTRUCTIONS
-              </h2>
+              <div className="h-7 w-40 animate-pulse rounded bg-[#191C22]" />
 
-              <ol className="mt-5 list-decimal space-y-3 pl-5 text-[15px] leading-[1.55] text-[#D0D1D4]">
-                {workout.instructions.map(
-                  (instruction, index) => (
-                    <li key={index} className="pl-1">
-                      {instruction}
-                    </li>
-                  )
-                )}
-              </ol>
+              <div className="mt-5 space-y-3">
+                <div className="h-4 w-full animate-pulse rounded bg-[#191C22]" />
+                <div className="h-4 w-[95%] animate-pulse rounded bg-[#191C22]" />
+                <div className="h-4 w-[85%] animate-pulse rounded bg-[#191C22]" />
+                <div className="h-4 w-[90%] animate-pulse rounded bg-[#191C22]" />
+              </div>
             </div>
 
-            {/* Actions */}
-            <WorkoutActions workout={workout} />
+            {/* Action buttons */}
+            <div className="mt-8 flex flex-wrap gap-3">
+              <div className="h-11 w-32 animate-pulse rounded-full bg-[#191C22]" />
+              <div className="h-11 w-36 animate-pulse rounded-full bg-[#191C22]" />
+            </div>
           </div>
         </div>
       </section>
