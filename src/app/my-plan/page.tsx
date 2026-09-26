@@ -42,7 +42,7 @@ function MyPlanContent() {
     saved,
     isLoaded,
     removeFromPlan,
-    removeFromSaved,
+    toggleSaved,
   } = useWorkout();
 
   const requestedTab = searchParams.get("tab");
@@ -60,8 +60,7 @@ function MyPlanContent() {
   const sortRef = useRef<HTMLDivElement>(null);
 
   /*
-   * Close the sorting dropdown when the user
-   * clicks anywhere outside it.
+   * Close sort dropdown when clicking outside.
    */
   useEffect(() => {
     const handleOutsideClick = (event: MouseEvent) => {
@@ -87,18 +86,13 @@ function MyPlanContent() {
   }, []);
 
   /*
-   * Clear the search when switching between
-   * Today's Plan and Saved.
+   * Choose which collection is currently visible.
    */
-  useEffect(() => {
-    setSearchQuery("");
-  }, [activeTab]);
-
   const activeWorkouts =
     activeTab === "plan" ? plan : saved;
 
   /*
-   * Live summary values.
+   * Live summary.
    */
   const totalExercises = activeWorkouts.length;
 
@@ -114,37 +108,28 @@ function MyPlanContent() {
   );
 
   /*
-   * Search first, then sort the matching workouts.
-   *
-   * Search works with:
-   * - workout name
-   * - muscle-group tags
+   * Search by workout name or muscle-group tag,
+   * then apply the selected sorting option.
    */
   const filteredAndSortedWorkouts = useMemo(() => {
-    const query = searchQuery
-      .trim()
-      .toLowerCase();
+    const query = searchQuery.trim().toLowerCase();
 
-    const filtered = activeWorkouts.filter(
-      (workout) => {
-        if (!query) {
-          return true;
-        }
-
-        const matchesName = workout.name
-          .toLowerCase()
-          .includes(query);
-
-        const matchesTag =
-          workout.muscleGroups.some((group) =>
-            group
-              .toLowerCase()
-              .includes(query)
-          );
-
-        return matchesName || matchesTag;
+    const filtered = activeWorkouts.filter((workout) => {
+      if (!query) {
+        return true;
       }
-    );
+
+      const matchesName = workout.name
+        .toLowerCase()
+        .includes(query);
+
+      const matchesTag = workout.muscleGroups.some(
+        (group) =>
+          group.toLowerCase().includes(query)
+      );
+
+      return matchesName || matchesTag;
+    });
 
     return [...filtered].sort((a, b) => {
       if (sortBy === "duration") {
@@ -153,23 +138,30 @@ function MyPlanContent() {
 
       if (sortBy === "calories") {
         return (
-          a.caloriesBurned -
-          b.caloriesBurned
+          a.caloriesBurned - b.caloriesBurned
         );
       }
 
       return b.rating - a.rating;
     });
-  }, [
-    activeWorkouts,
-    searchQuery,
-    sortBy,
-  ]);
+  }, [activeWorkouts, searchQuery, sortBy]);
 
+  /*
+   * Switch between Today's Plan and Saved.
+   *
+   * Search is cleared here instead of inside
+   * useEffect to avoid the React lint warning.
+   */
   const handleTabChange = (tab: TabType) => {
+    setSearchQuery("");
+    setSortOpen(false);
+
     router.push(`/my-plan?tab=${tab}`);
   };
 
+  /*
+   * Remove workout from the currently active list.
+   */
   const handleRemove = (workout: Workout) => {
     if (activeTab === "plan") {
       removeFromPlan(workout.id);
@@ -181,13 +173,22 @@ function MyPlanContent() {
       return;
     }
 
-    removeFromSaved(workout.id);
+    /*
+     * toggleSaved already exists in WorkoutContext.
+     * Because this workout is currently saved,
+     * toggling it removes it from Saved.
+     */
+    toggleSaved(workout);
 
     toast.success(
       `${workout.name} removed from saved workouts`
     );
   };
 
+  /*
+   * Marking a workout as done removes it
+   * from today's plan.
+   */
   const handleDone = (workout: Workout) => {
     removeFromPlan(workout.id);
 
@@ -227,12 +228,12 @@ function MyPlanContent() {
 
             <p className="mt-3 max-w-[620px] text-[14px] leading-[1.6] text-[#8E929B] sm:text-[15px]">
               Keep up to five lifts in today&apos;s plan,
-              save workouts for later, and track the
-              work as it adds up.
+              save workouts for later, and track the work
+              as it adds up.
             </p>
           </div>
 
-          {/* Tabs + sort */}
+          {/* Tabs + sorting */}
           <div
             className="
               mt-8
@@ -444,10 +445,7 @@ function MyPlanContent() {
               <Search
                 size={18}
                 strokeWidth={2}
-                className="
-                  shrink-0
-                  text-[#8E929B]
-                "
+                className="shrink-0 text-[#8E929B]"
                 aria-hidden="true"
               />
 
@@ -455,9 +453,7 @@ function MyPlanContent() {
                 type="search"
                 value={searchQuery}
                 onChange={(event) =>
-                  setSearchQuery(
-                    event.target.value
-                  )
+                  setSearchQuery(event.target.value)
                 }
                 placeholder={
                   activeTab === "plan"
@@ -527,25 +523,11 @@ function MyPlanContent() {
             "
           >
             <div className="px-5 py-5 sm:px-6">
-              <p
-                className="
-                  font-display
-                  text-[12px]
-                  uppercase
-                  text-[#8E929B]
-                "
-              >
+              <p className="font-display text-[12px] uppercase text-[#8E929B]">
                 EXERCISES
               </p>
 
-              <p
-                className="
-                  mt-2
-                  text-[24px]
-                  font-semibold
-                  text-[#F4F4F5]
-                "
-              >
+              <p className="mt-2 text-[24px] font-semibold text-[#F4F4F5]">
                 {totalExercises}
               </p>
             </div>
@@ -561,25 +543,11 @@ function MyPlanContent() {
                 sm:px-6
               "
             >
-              <p
-                className="
-                  font-display
-                  text-[12px]
-                  uppercase
-                  text-[#8E929B]
-                "
-              >
+              <p className="font-display text-[12px] uppercase text-[#8E929B]">
                 MINUTES
               </p>
 
-              <p
-                className="
-                  mt-2
-                  text-[24px]
-                  font-semibold
-                  text-[#F4F4F5]
-                "
-              >
+              <p className="mt-2 text-[24px] font-semibold text-[#F4F4F5]">
                 {totalMinutes}
               </p>
             </div>
@@ -595,25 +563,11 @@ function MyPlanContent() {
                 sm:px-6
               "
             >
-              <p
-                className="
-                  font-display
-                  text-[12px]
-                  uppercase
-                  text-[#8E929B]
-                "
-              >
+              <p className="font-display text-[12px] uppercase text-[#8E929B]">
                 CALORIES
               </p>
 
-              <p
-                className="
-                  mt-2
-                  text-[24px]
-                  font-semibold
-                  text-[#F4F4F5]
-                "
-              >
+              <p className="mt-2 text-[24px] font-semibold text-[#F4F4F5]">
                 {totalCalories}
               </p>
             </div>
@@ -640,10 +594,9 @@ function MyPlanContent() {
             </div>
           )}
 
-          {/* Empty / no search results */}
+          {/* Empty / search empty state */}
           {isLoaded &&
-            filteredAndSortedWorkouts.length ===
-              0 && (
+            filteredAndSortedWorkouts.length === 0 && (
               <div
                 className="
                   mt-8
@@ -674,14 +627,7 @@ function MyPlanContent() {
                       : "NOTHING HERE YET"}
                   </h2>
 
-                  <p
-                    className="
-                      mt-3
-                      text-[14px]
-                      leading-[1.6]
-                      text-[#8E929B]
-                    "
-                  >
+                  <p className="mt-3 text-[14px] leading-[1.6] text-[#8E929B]">
                     {noSearchResults
                       ? "Try searching by another workout name or muscle group."
                       : activeTab === "plan"
@@ -741,8 +687,7 @@ function MyPlanContent() {
 
           {/* Workout list */}
           {isLoaded &&
-            filteredAndSortedWorkouts.length >
-              0 && (
+            filteredAndSortedWorkouts.length > 0 && (
               <div className="mt-8 space-y-4">
                 {filteredAndSortedWorkouts.map(
                   (workout) => (
@@ -794,9 +739,9 @@ function MyPlanContent() {
                           />
                         </Link>
 
-                        {/* Workout information */}
+                        {/* Information */}
                         <div className="min-w-0 p-5 sm:p-6">
-                          {/* Tags */}
+                          {/* Muscle groups */}
                           <div className="flex flex-wrap gap-2">
                             {workout.muscleGroups.map(
                               (group) => (
@@ -862,13 +807,7 @@ function MyPlanContent() {
                               text-[#B5B7BC]
                             "
                           >
-                            <span
-                              className="
-                                inline-flex
-                                items-center
-                                gap-1.5
-                              "
-                            >
+                            <span className="inline-flex items-center gap-1.5">
                               <Clock3
                                 size={15}
                                 strokeWidth={2}
@@ -878,32 +817,17 @@ function MyPlanContent() {
                               {workout.duration} min
                             </span>
 
-                            <span
-                              className="
-                                inline-flex
-                                items-center
-                                gap-1.5
-                              "
-                            >
+                            <span className="inline-flex items-center gap-1.5">
                               <Flame
                                 size={15}
                                 strokeWidth={2}
                                 className="text-[#8E929B]"
                               />
 
-                              {
-                                workout.caloriesBurned
-                              }{" "}
-                              kcal
+                              {workout.caloriesBurned} kcal
                             </span>
 
-                            <span
-                              className="
-                                inline-flex
-                                items-center
-                                gap-1.5
-                              "
-                            >
+                            <span className="inline-flex items-center gap-1.5">
                               <Star
                                 size={15}
                                 strokeWidth={2}
@@ -937,9 +861,7 @@ function MyPlanContent() {
                             <button
                               type="button"
                               onClick={() =>
-                                handleDone(
-                                  workout
-                                )
+                                handleDone(workout)
                               }
                               className="
                                 inline-flex
@@ -972,9 +894,7 @@ function MyPlanContent() {
                           <button
                             type="button"
                             onClick={() =>
-                              handleRemove(
-                                workout
-                              )
+                              handleRemove(workout)
                             }
                             aria-label={`Remove ${workout.name}`}
                             className="
