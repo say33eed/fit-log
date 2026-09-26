@@ -1,11 +1,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #1e1e1e;
+  --background: #0d0f12;
   --foreground: #ffffff;
 
   --fitlog-lime: #ccff00;
-  --fitlog-dark: #1e1e1e;
+  --fitlog-dark: #0d0f12;
 }
 
 html {
@@ -17,6 +17,11 @@ body {
   background: var(--background);
   color: var(--foreground);
   min-height: 100vh;
+  font-family: var(--font-inter), sans-serif;
+}
+
+.font-display {
+  font-family: var(--font-oswald), sans-serif;
 }
 
 * {
