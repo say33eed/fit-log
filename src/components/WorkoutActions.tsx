@@ -1,0 +1,98 @@
+"use client";
+
+import {
+  Bookmark,
+  CalendarCheck,
+  CalendarPlus,
+} from "lucide-react";
+
+import { useWorkout } from "@/context/WorkoutContext";
+import type { Workout } from "@/types/workout";
+
+interface WorkoutActionsProps {
+  workout: Workout;
+}
+
+export default function WorkoutActions({
+  workout,
+}: WorkoutActionsProps) {
+  const {
+    addToPlan,
+    toggleSaved,
+    isInPlan,
+    isSaved,
+  } = useWorkout();
+
+  const inPlan = isInPlan(workout.id);
+  const saved = isSaved(workout.id);
+
+  return (
+    <div className="mt-7 flex flex-col gap-3 md:flex-row">
+      <button
+        type="button"
+        onClick={() => addToPlan(workout)}
+        disabled={inPlan}
+        className="
+          inline-flex
+          h-[44px]
+          w-full
+          items-center
+          justify-center
+          gap-2
+          rounded-xl
+          bg-[#CCFF00]
+          px-5
+          text-[14px]
+          font-bold
+          text-[#090B0E]
+          transition
+          hover:brightness-90
+          disabled:cursor-default
+          disabled:brightness-75
+          md:w-auto
+        "
+      >
+        {inPlan ? (
+          <CalendarCheck size={17} strokeWidth={2} />
+        ) : (
+          <CalendarPlus size={17} strokeWidth={2} />
+        )}
+
+        {inPlan ? "Added to today's plan" : "Add to today's plan"}
+      </button>
+
+      <button
+        type="button"
+        onClick={() => toggleSaved(workout)}
+        className={`
+          inline-flex
+          h-[44px]
+          w-full
+          items-center
+          justify-center
+          gap-2
+          rounded-xl
+          border
+          px-5
+          text-[14px]
+          font-medium
+          transition
+          md:w-auto
+          ${
+            saved
+              ? "border-[#CCFF00] bg-[#CCFF00]/10 text-[#CCFF00]"
+              : "border-[#5A5E67] bg-transparent text-[#F4F4F5] hover:bg-white/[0.04]"
+          }
+        `}
+      >
+        <Bookmark
+          size={16}
+          strokeWidth={2}
+          fill={saved ? "currentColor" : "none"}
+        />
+
+        {saved ? "Saved" : "Save for later"}
+      </button>
+    </div>
+  );
+}

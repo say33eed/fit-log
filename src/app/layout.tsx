@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Oswald } from "next/font/google";
 import "./globals.css";
+import { WorkoutProvider } from "@/context/WorkoutContext";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -26,7 +27,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${oswald.variable}`}>
-        {children}
+        <WorkoutProvider>
+          {children}
+        </WorkoutProvider>
       </body>
     </html>
   );

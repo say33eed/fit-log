@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { notFound } from "next/navigation";
-import { Bookmark, CalendarPlus } from "lucide-react";
+import WorkoutActions from "@/components/WorkoutActions";
 
 import Navbar from "@/components/Navbar";
 import { getWorkoutById } from "@/lib/api";
@@ -158,58 +158,8 @@ export default async function WorkoutDetailsPage({
                             </ol>
                         </div>
 
-                        {/* Actions — functionality comes next */}
-                        <div className="mt-7 flex flex-col gap-3 md:flex-row">
-                            <button
-                                type="button"
-                                className="
-                  inline-flex
-                  h-[44px]
-                  w-full
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  bg-[#CCFF00]
-                  px-5
-                  text-[14px]
-                  font-bold
-                  text-[#090B0E]
-                  transition
-                  hover:brightness-90
-                  md:w-auto
-                "
-                            >
-                                <CalendarPlus size={17} strokeWidth={2} />
-                                Add to today&apos;s plan
-                            </button>
-
-                            <button
-                                type="button"
-                                className="
-                  inline-flex
-                  h-[44px]
-                  w-full
-                  items-center
-                  justify-center
-                  gap-2
-                  rounded-xl
-                  border
-                  border-[#5A5E67]
-                  bg-transparent
-                  px-5
-                  text-[14px]
-                  font-medium
-                  text-[#F4F4F5]
-                  transition
-                  hover:bg-white/[0.04]
-                  md:w-auto
-                "
-                            >
-                                <Bookmark size={16} strokeWidth={2} />
-                                Save for later
-                            </button>
-                        </div>
+                        {/* Actions */}
+                        <WorkoutActions workout={workout} />
                     </div>
                 </div>
             </section>
