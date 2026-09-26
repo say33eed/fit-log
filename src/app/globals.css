@@ -1,11 +1,12 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0d0f12;
+  --background: #0d0f13;
   --foreground: #ffffff;
 
   --fitlog-lime: #ccff00;
-  --fitlog-dark: #0d0f12;
+  --fitlog-dark: #0d0f13;
+  --fitlog-panel: #191c22;
 }
 
 html {
