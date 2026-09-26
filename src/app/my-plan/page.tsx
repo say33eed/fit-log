@@ -1,18 +1,21 @@
 "use client";
 
-import Image from "next/image";
-import Link from "next/link";
 import {
   Suspense,
+  useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
-import { useSearchParams } from "next/navigation";
+import Image from "next/image";
+import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   Check,
   ChevronDown,
   Clock3,
   Flame,
+  Search,
   Star,
   X,
 } from "lucide-react";
@@ -21,115 +24,171 @@ import toast from "react-hot-toast";
 import { useWorkout } from "@/context/WorkoutContext";
 import type { Workout } from "@/types/workout";
 
-type Tab = "plan" | "saved";
+type TabType = "plan" | "saved";
+type SortOption = "duration" | "calories" | "rating";
 
-type SortOption =
-  | "duration"
-  | "calories"
-  | "rating";
+const sortLabels: Record<SortOption, string> = {
+  duration: "Duration",
+  calories: "Calories",
+  rating: "Rating",
+};
 
 function MyPlanContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
   const {
     plan,
     saved,
-    removeFromPlan,
-    toggleSaved,
     isLoaded,
+    removeFromPlan,
+    removeFromSaved,
   } = useWorkout();
 
-  const searchParams = useSearchParams();
+  const requestedTab = searchParams.get("tab");
 
-  /*
-   * Navbar controls which tab opens:
-   *
-   * /my-plan?tab=plan
-   * /my-plan?tab=saved
-   *
-   * If no tab is supplied, Today's Plan
-   * is selected by default.
-   */
-  const activeTab: Tab =
-    searchParams.get("tab") === "saved"
-      ? "saved"
-      : "plan";
+  const activeTab: TabType =
+    requestedTab === "saved" ? "saved" : "plan";
 
   const [sortBy, setSortBy] =
     useState<SortOption>("duration");
 
-  const [sortOpen, setSortOpen] =
-    useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
+
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const sortRef = useRef<HTMLDivElement>(null);
 
   /*
-   * Use the currently selected tab's workouts.
-   *
-   * Today's Plan -> plan
-   * Saved        -> saved
+   * Close the sorting dropdown when the user
+   * clicks anywhere outside it.
    */
+  useEffect(() => {
+    const handleOutsideClick = (event: MouseEvent) => {
+      if (
+        sortRef.current &&
+        !sortRef.current.contains(event.target as Node)
+      ) {
+        setSortOpen(false);
+      }
+    };
+
+    document.addEventListener(
+      "mousedown",
+      handleOutsideClick
+    );
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        handleOutsideClick
+      );
+    };
+  }, []);
+
+  /*
+   * Clear the search when switching between
+   * Today's Plan and Saved.
+   */
+  useEffect(() => {
+    setSearchQuery("");
+  }, [activeTab]);
+
   const activeWorkouts =
     activeTab === "plan" ? plan : saved;
 
   /*
-   * LIVE SUMMARY
-   *
-   * This now calculates from activeWorkouts,
-   * so switching between Today's Plan and Saved
-   * immediately updates:
-   *
-   * - Exercises
-   * - Minutes
-   * - Calories
+   * Live summary values.
    */
-  const summary = useMemo(() => {
-    return activeWorkouts.reduce(
-      (total, workout) => {
-        total.minutes += workout.duration;
-        total.calories +=
-          workout.caloriesBurned;
+  const totalExercises = activeWorkouts.length;
 
-        return total;
-      },
-      {
-        minutes: 0,
-        calories: 0,
-      }
-    );
-  }, [activeWorkouts]);
+  const totalMinutes = activeWorkouts.reduce(
+    (total, workout) => total + workout.duration,
+    0
+  );
+
+  const totalCalories = activeWorkouts.reduce(
+    (total, workout) =>
+      total + workout.caloriesBurned,
+    0
+  );
 
   /*
-   * Sort only the workouts belonging to the
-   * currently active tab.
+   * Search first, then sort the matching workouts.
+   *
+   * Search works with:
+   * - workout name
+   * - muscle-group tags
    */
-  const sortedWorkouts = useMemo(() => {
-    return [...activeWorkouts].sort(
-      (a, b) => {
-        if (sortBy === "duration") {
-          return a.duration - b.duration;
+  const filteredAndSortedWorkouts = useMemo(() => {
+    const query = searchQuery
+      .trim()
+      .toLowerCase();
+
+    const filtered = activeWorkouts.filter(
+      (workout) => {
+        if (!query) {
+          return true;
         }
 
-        if (sortBy === "calories") {
-          return (
-            a.caloriesBurned -
-            b.caloriesBurned
+        const matchesName = workout.name
+          .toLowerCase()
+          .includes(query);
+
+        const matchesTag =
+          workout.muscleGroups.some((group) =>
+            group
+              .toLowerCase()
+              .includes(query)
           );
-        }
 
-        return b.rating - a.rating;
+        return matchesName || matchesTag;
       }
     );
-  }, [activeWorkouts, sortBy]);
 
-  const sortLabels: Record<
-    SortOption,
-    string
-  > = {
-    duration: "Duration",
-    calories: "Calories",
-    rating: "Rating",
+    return [...filtered].sort((a, b) => {
+      if (sortBy === "duration") {
+        return a.duration - b.duration;
+      }
+
+      if (sortBy === "calories") {
+        return (
+          a.caloriesBurned -
+          b.caloriesBurned
+        );
+      }
+
+      return b.rating - a.rating;
+    });
+  }, [
+    activeWorkouts,
+    searchQuery,
+    sortBy,
+  ]);
+
+  const handleTabChange = (tab: TabType) => {
+    router.push(`/my-plan?tab=${tab}`);
   };
 
-  const handleMarkAsDone = (
-    workout: Workout
-  ) => {
+  const handleRemove = (workout: Workout) => {
+    if (activeTab === "plan") {
+      removeFromPlan(workout.id);
+
+      toast.success(
+        `${workout.name} removed from today's plan`
+      );
+
+      return;
+    }
+
+    removeFromSaved(workout.id);
+
+    toast.success(
+      `${workout.name} removed from saved workouts`
+    );
+  };
+
+  const handleDone = (workout: Workout) => {
     removeFromPlan(workout.id);
 
     toast.success(
@@ -137,306 +196,155 @@ function MyPlanContent() {
     );
   };
 
-  const handleRemove = (
-    workout: Workout
-  ) => {
-    if (activeTab === "plan") {
-      removeFromPlan(workout.id);
+  const hasSearchQuery =
+    searchQuery.trim().length > 0;
 
-      toast.success(
-        "Workout removed from your plan"
-      );
-
-      return;
-    }
-
-    toggleSaved(workout);
-
-    toast.success(
-      "Workout removed from saved"
-    );
-  };
+  const noSearchResults =
+    activeWorkouts.length > 0 &&
+    hasSearchQuery &&
+    filteredAndSortedWorkouts.length === 0;
 
   return (
-    <main className="bg-[#0D0F12]">
-      <section
-        className="
-          mx-auto
-          w-full
-          max-w-[1200px]
-          px-4
-          pb-16
-          pt-8
-          sm:px-5
-          sm:pt-9
-          md:px-8
-          md:pb-20
-          md:pt-10
-          lg:px-8
-          lg:pb-24
-          lg:pt-10
-          xl:px-0
-        "
-      >
-        {/* Heading */}
-        <div>
-          <h1
-            className="
-              font-display
-              text-[34px]
-              font-medium
-              uppercase
-              leading-none
-              text-[#F4F4F5]
-              md:text-[36px]
-            "
-          >
-            My Plan
-          </h1>
-
-          <p className="mt-3 text-[14px] leading-[1.5] text-[#8E929B] md:text-[15px]">
-            Cap of five lifts for today.
-            Finish them, then load more.
-          </p>
-        </div>
-
-        {/* Live summary */}
-        <div
-          className="
-            mt-9
-            overflow-hidden
-            rounded-[16px]
-            border
-            border-[#252931]
-            bg-[#171A20]
-            md:grid
-            md:grid-cols-3
-          "
-        >
-          {/* Exercises */}
-          <div
-            className="
-              relative
-              px-6
-              py-5
-              md:px-7
-              md:py-7
-              lg:px-7
-            "
-          >
-            <p className="text-[12px] text-[#8E929B]">
-              Exercises
-            </p>
-
-            <p className="font-display mt-2 text-[34px] font-semibold leading-none text-[#CCFF00]">
-              {activeWorkouts.length}
-            </p>
-
-            <span
+    <main className="min-h-screen bg-[#0D0F13] text-white">
+      <section className="px-4 pb-24 pt-8 sm:px-5 md:px-6 md:pt-10 lg:px-8 lg:pt-12">
+        <div className="mx-auto max-w-[1200px]">
+          {/* Page heading */}
+          <div>
+            <h1
               className="
-                absolute
-                right-0
-                top-1/2
-                hidden
-                h-[50px]
-                w-px
-                -translate-y-1/2
-                bg-[#252931]
-                md:block
+                font-display
+                text-[34px]
+                font-medium
+                uppercase
+                leading-none
+                text-[#F4F4F5]
+                sm:text-[38px]
+                lg:text-[42px]
               "
-            />
-          </div>
-
-          {/* Minutes */}
-          <div
-            className="
-              relative
-              border-t
-              border-[#252931]
-              px-6
-              py-5
-              md:border-t-0
-              md:px-7
-              md:py-7
-              lg:px-7
-            "
-          >
-            <p className="text-[12px] text-[#8E929B]">
-              Minutes
-            </p>
-
-            <p className="font-display mt-2 text-[34px] font-semibold leading-none text-[#F4F4F5]">
-              {summary.minutes}
-            </p>
-
-            <span
-              className="
-                absolute
-                right-0
-                top-1/2
-                hidden
-                h-[50px]
-                w-px
-                -translate-y-1/2
-                bg-[#252931]
-                md:block
-              "
-            />
-          </div>
-
-          {/* Calories */}
-          <div
-            className="
-              border-t
-              border-[#252931]
-              px-6
-              py-5
-              md:border-t-0
-              md:px-7
-              md:py-7
-              lg:px-7
-            "
-          >
-            <p className="text-[12px] text-[#8E929B]">
-              Calories
-            </p>
-
-            <p className="font-display mt-2 text-[34px] font-semibold leading-none text-[#F4F4F5]">
-              {summary.calories}
-            </p>
-          </div>
-        </div>
-
-        {/* Tabs + sorting */}
-        <div
-          className="
-            mt-7
-            flex
-            flex-col
-            gap-5
-            md:flex-row
-            md:items-start
-            md:justify-between
-            lg:items-center
-          "
-        >
-          {/* Tabs */}
-          <div
-            className="
-              inline-flex
-              h-[48px]
-              w-fit
-              items-center
-              rounded-[15px]
-              border
-              border-[#252931]
-              bg-[#171A20]
-              p-[3px]
-            "
-          >
-            <Link
-              href="/my-plan?tab=plan"
-              className={`
-                flex
-                h-[40px]
-                min-w-[124px]
-                items-center
-                justify-center
-                whitespace-nowrap
-                rounded-[11px]
-                border
-                px-4
-                text-[13px]
-                transition-colors
-                ${
-                  activeTab === "plan"
-                    ? "border-[#30343D] bg-[#242832] font-semibold text-[#F4F4F5]"
-                    : "border-transparent bg-transparent text-[#858A94] hover:text-[#F4F4F5]"
-                }
-              `}
             >
-              Today&apos;s Plan
-            </Link>
+              MY PLAN
+            </h1>
 
-            <Link
-              href="/my-plan?tab=saved"
-              className={`
-                flex
-                h-[40px]
-                min-w-[88px]
-                items-center
-                justify-center
-                whitespace-nowrap
-                rounded-[11px]
-                border
-                px-4
-                text-[13px]
-                transition-colors
-                ${
-                  activeTab === "saved"
-                    ? "border-[#30343D] bg-[#242832] font-semibold text-[#F4F4F5]"
-                    : "border-transparent bg-transparent text-[#858A94] hover:text-[#F4F4F5]"
-                }
-              `}
-            >
-              Saved
-            </Link>
+            <p className="mt-3 max-w-[620px] text-[14px] leading-[1.6] text-[#8E929B] sm:text-[15px]">
+              Keep up to five lifts in today&apos;s plan,
+              save workouts for later, and track the
+              work as it adds up.
+            </p>
           </div>
 
-          {/* Sort */}
+          {/* Tabs + sort */}
           <div
             className="
+              mt-8
               flex
-              w-full
               flex-col
-              gap-2
-              md:w-auto
-              md:flex-row
-              md:items-center
-              md:gap-3
+              gap-4
+              sm:flex-row
+              sm:items-center
+              sm:justify-between
             "
           >
-            <span className="text-[14px] text-[#A3A6AD] md:text-[12px]">
-              Sort By
-            </span>
+            {/* Tabs */}
+            <div
+              className="
+                inline-flex
+                w-full
+                rounded-[12px]
+                border
+                border-[#292D35]
+                bg-[#171A20]
+                p-1
+                sm:w-auto
+              "
+            >
+              <button
+                type="button"
+                onClick={() =>
+                  handleTabChange("plan")
+                }
+                className={`
+                  flex-1
+                  rounded-[9px]
+                  px-5
+                  py-2.5
+                  text-[13px]
+                  font-semibold
+                  transition-colors
+                  sm:flex-none
+                  ${
+                    activeTab === "plan"
+                      ? "bg-[#CCFF00] text-[#090B0E]"
+                      : "text-[#A4A7AE] hover:text-white"
+                  }
+                `}
+              >
+                TODAY&apos;S PLAN
+              </button>
 
-            <div className="relative w-full md:w-[126px]">
+              <button
+                type="button"
+                onClick={() =>
+                  handleTabChange("saved")
+                }
+                className={`
+                  flex-1
+                  rounded-[9px]
+                  px-5
+                  py-2.5
+                  text-[13px]
+                  font-semibold
+                  transition-colors
+                  sm:flex-none
+                  ${
+                    activeTab === "saved"
+                      ? "bg-[#CCFF00] text-[#090B0E]"
+                      : "text-[#A4A7AE] hover:text-white"
+                  }
+                `}
+              >
+                SAVED
+              </button>
+            </div>
+
+            {/* Sort dropdown */}
+            <div
+              ref={sortRef}
+              className="relative"
+            >
               <button
                 type="button"
                 aria-haspopup="listbox"
                 aria-expanded={sortOpen}
                 onClick={() =>
-                  setSortOpen(
-                    (current) => !current
-                  )
+                  setSortOpen((open) => !open)
                 }
                 className="
                   flex
-                  h-[44px]
+                  h-[42px]
                   w-full
                   items-center
                   justify-between
-                  rounded-[12px]
+                  gap-4
+                  rounded-[11px]
                   border
-                  border-[#30343D]
+                  border-[#292D35]
                   bg-[#171A20]
-                  px-3.5
+                  px-4
                   text-[13px]
-                  text-[#F4F4F5]
-                  outline-none
+                  text-[#D5D6D9]
                   transition-colors
-                  hover:border-[#454A55]
+                  hover:border-[#3A3E47]
+                  sm:w-[180px]
                 "
               >
                 <span>
-                  {sortLabels[sortBy]}
+                  Sort: {sortLabels[sortBy]}
                 </span>
 
                 <ChevronDown
-                  size={15}
+                  size={16}
                   strokeWidth={2}
                   className={`
-                    text-[#C8CBD0]
                     transition-transform
                     ${
                       sortOpen
@@ -453,405 +361,685 @@ function MyPlanContent() {
                   className="
                     absolute
                     right-0
-                    top-[50px]
-                    z-40
+                    top-[48px]
+                    z-30
                     w-full
-                    min-w-[160px]
-                    rounded-[12px]
+                    overflow-hidden
+                    rounded-[11px]
                     border
-                    border-[#252931]
-                    bg-[#0D0F12]
-                    p-2
-                    shadow-2xl
+                    border-[#292D35]
+                    bg-[#171A20]
+                    p-1
+                    shadow-xl
+                    sm:w-[180px]
                   "
                 >
                   {(
-                    [
-                      "duration",
-                      "calories",
-                      "rating",
-                    ] as SortOption[]
-                  ).map((option) => {
-                    const selected =
-                      sortBy === option;
-
-                    return (
-                      <button
-                        key={option}
-                        type="button"
-                        role="option"
-                        aria-selected={
-                          selected
+                    Object.keys(
+                      sortLabels
+                    ) as SortOption[]
+                  ).map((option) => (
+                    <button
+                      key={option}
+                      type="button"
+                      role="option"
+                      aria-selected={
+                        sortBy === option
+                      }
+                      onClick={() => {
+                        setSortBy(option);
+                        setSortOpen(false);
+                      }}
+                      className={`
+                        flex
+                        w-full
+                        items-center
+                        justify-between
+                        rounded-[8px]
+                        px-3
+                        py-2.5
+                        text-left
+                        text-[13px]
+                        transition-colors
+                        ${
+                          sortBy === option
+                            ? "bg-[#252931] text-[#CCFF00]"
+                            : "text-[#D5D6D9] hover:bg-[#20242B] hover:text-white"
                         }
-                        onClick={() => {
-                          setSortBy(option);
-                          setSortOpen(false);
-                        }}
-                        className={`
-                          flex
-                          w-full
-                          items-center
-                          gap-2
-                          rounded-[9px]
-                          px-3
-                          py-2.5
-                          text-left
-                          text-[13px]
-                          transition-colors
-                          ${
-                            selected
-                              ? "bg-[#242832] text-[#F4F4F5]"
-                              : "text-[#F4F4F5] hover:bg-[#191C22]"
-                          }
-                        `}
-                      >
-                        <span className="w-3">
-                          {selected
-                            ? "✓"
-                            : ""}
-                        </span>
+                      `}
+                    >
+                      {sortLabels[option]}
 
-                        <span>
-                          {
-                            sortLabels[
-                              option
-                            ]
-                          }
-                        </span>
-                      </button>
-                    );
-                  })}
+                      {sortBy === option && (
+                        <Check
+                          size={14}
+                          strokeWidth={2.2}
+                        />
+                      )}
+                    </button>
+                  ))}
                 </div>
               )}
             </div>
           </div>
-        </div>
 
-        {/* Loading */}
-        {!isLoaded && (
-          <div className="mt-8 flex min-h-[180px] items-center justify-center rounded-[16px] border border-[#252931] bg-[#171A20]">
-            <p className="text-[14px] text-[#8E929B]">
-              Loading workouts...
-            </p>
-          </div>
-        )}
-
-        {/* Empty state */}
-        {isLoaded &&
-          sortedWorkouts.length === 0 && (
+          {/* Search */}
+          <div className="mt-6">
             <div
               className="
-                mt-7
                 flex
-                min-h-[300px]
-                flex-col
+                h-[46px]
+                w-full
+                max-w-[420px]
+                items-center
+                rounded-[12px]
+                border
+                border-[#292D35]
+                bg-[#171A20]
+                px-4
+                transition-colors
+                focus-within:border-[#CCFF00]/60
+              "
+            >
+              <Search
+                size={18}
+                strokeWidth={2}
+                className="
+                  shrink-0
+                  text-[#8E929B]
+                "
+                aria-hidden="true"
+              />
+
+              <input
+                type="search"
+                value={searchQuery}
+                onChange={(event) =>
+                  setSearchQuery(
+                    event.target.value
+                  )
+                }
+                placeholder={
+                  activeTab === "plan"
+                    ? "Search today's plan..."
+                    : "Search saved workouts..."
+                }
+                aria-label={
+                  activeTab === "plan"
+                    ? "Search today's plan by workout name or muscle group"
+                    : "Search saved workouts by workout name or muscle group"
+                }
+                className="
+                  h-full
+                  min-w-0
+                  flex-1
+                  bg-transparent
+                  px-3
+                  text-[14px]
+                  text-[#F4F4F5]
+                  outline-none
+                  placeholder:text-[#6F737C]
+                "
+              />
+
+              {searchQuery && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setSearchQuery("")
+                  }
+                  aria-label="Clear search"
+                  className="
+                    flex
+                    h-7
+                    w-7
+                    shrink-0
+                    items-center
+                    justify-center
+                    rounded-full
+                    text-[#8E929B]
+                    transition-colors
+                    hover:bg-[#252931]
+                    hover:text-[#F4F4F5]
+                  "
+                >
+                  <X
+                    size={15}
+                    strokeWidth={2}
+                  />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* Live summary */}
+          <div
+            className="
+              mt-8
+              grid
+              grid-cols-1
+              overflow-hidden
+              rounded-[16px]
+              border
+              border-[#292D35]
+              bg-[#171A20]
+              sm:grid-cols-3
+            "
+          >
+            <div className="px-5 py-5 sm:px-6">
+              <p
+                className="
+                  font-display
+                  text-[12px]
+                  uppercase
+                  text-[#8E929B]
+                "
+              >
+                EXERCISES
+              </p>
+
+              <p
+                className="
+                  mt-2
+                  text-[24px]
+                  font-semibold
+                  text-[#F4F4F5]
+                "
+              >
+                {totalExercises}
+              </p>
+            </div>
+
+            <div
+              className="
+                border-t
+                border-[#292D35]
+                px-5
+                py-5
+                sm:border-l
+                sm:border-t-0
+                sm:px-6
+              "
+            >
+              <p
+                className="
+                  font-display
+                  text-[12px]
+                  uppercase
+                  text-[#8E929B]
+                "
+              >
+                MINUTES
+              </p>
+
+              <p
+                className="
+                  mt-2
+                  text-[24px]
+                  font-semibold
+                  text-[#F4F4F5]
+                "
+              >
+                {totalMinutes}
+              </p>
+            </div>
+
+            <div
+              className="
+                border-t
+                border-[#292D35]
+                px-5
+                py-5
+                sm:border-l
+                sm:border-t-0
+                sm:px-6
+              "
+            >
+              <p
+                className="
+                  font-display
+                  text-[12px]
+                  uppercase
+                  text-[#8E929B]
+                "
+              >
+                CALORIES
+              </p>
+
+              <p
+                className="
+                  mt-2
+                  text-[24px]
+                  font-semibold
+                  text-[#F4F4F5]
+                "
+              >
+                {totalCalories}
+              </p>
+            </div>
+          </div>
+
+          {/* Loading */}
+          {!isLoaded && (
+            <div
+              className="
+                mt-8
+                flex
+                min-h-[260px]
                 items-center
                 justify-center
                 rounded-[16px]
                 border
-                border-[#252931]
+                border-[#292D35]
                 bg-[#171A20]
-                px-6
-                py-12
-                text-center
               "
             >
-              <h2 className="font-display text-[24px] font-medium uppercase text-[#F4F4F5]">
-                Nothing Here Yet
-              </h2>
-
-              <p className="mt-3 text-[14px] text-[#8E929B]">
-                {activeTab === "plan"
-                  ? "Browse the library and add a lift to get today moving."
-                  : "Save a workout from the library and it will show up here."}
+              <p className="text-[14px] text-[#8E929B]">
+                Loading workouts...
               </p>
-
-              <Link
-                href="/#library"
-                className="
-                  mt-6
-                  inline-flex
-                  h-[44px]
-                  items-center
-                  justify-center
-                  rounded-full
-                  bg-[#CCFF00]
-                  px-6
-                  text-[13px]
-                  font-bold
-                  text-[#090B0E]
-                  transition
-                  hover:brightness-90
-                "
-              >
-                Go to workouts
-              </Link>
             </div>
           )}
 
-        {/* Workout list */}
-        {isLoaded &&
-          sortedWorkouts.length > 0 && (
-            <div className="mt-7 space-y-4">
-              {sortedWorkouts.map(
-                (workout) => (
-                  <article
-                    key={workout.id}
+          {/* Empty / no search results */}
+          {isLoaded &&
+            filteredAndSortedWorkouts.length ===
+              0 && (
+              <div
+                className="
+                  mt-8
+                  flex
+                  min-h-[300px]
+                  items-center
+                  justify-center
+                  rounded-[16px]
+                  border
+                  border-[#292D35]
+                  bg-[#171A20]
+                  px-6
+                  text-center
+                "
+              >
+                <div>
+                  <h2
                     className="
-                      rounded-[16px]
-                      border
-                      border-[#252931]
-                      bg-[#171A20]
-                      p-4
-                      md:grid
-                      md:grid-cols-[140px_minmax(0,1fr)]
-                      md:gap-5
-                      md:p-4
-                      lg:flex
-                      lg:min-h-[112px]
-                      lg:items-center
-                      lg:gap-4
+                      font-display
+                      text-[24px]
+                      font-medium
+                      uppercase
+                      text-[#F4F4F5]
                     "
                   >
-                    {/* Image */}
-                    <div
+                    {noSearchResults
+                      ? "NO WORKOUTS FOUND"
+                      : "NOTHING HERE YET"}
+                  </h2>
+
+                  <p
+                    className="
+                      mt-3
+                      text-[14px]
+                      leading-[1.6]
+                      text-[#8E929B]
+                    "
+                  >
+                    {noSearchResults
+                      ? "Try searching by another workout name or muscle group."
+                      : activeTab === "plan"
+                        ? "Browse the library and add a lift to get today moving."
+                        : "Save a workout from the library and it will show up here."}
+                  </p>
+
+                  {noSearchResults ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setSearchQuery("")
+                      }
                       className="
-                        relative
-                        aspect-[3.6/1]
-                        w-full
+                        mt-6
+                        inline-flex
+                        h-[42px]
+                        items-center
+                        justify-center
+                        rounded-[10px]
+                        bg-[#CCFF00]
+                        px-5
+                        text-[13px]
+                        font-bold
+                        text-[#090B0E]
+                        transition
+                        hover:brightness-90
+                      "
+                    >
+                      CLEAR SEARCH
+                    </button>
+                  ) : (
+                    <Link
+                      href="/#library"
+                      className="
+                        mt-6
+                        inline-flex
+                        h-[42px]
+                        items-center
+                        justify-center
+                        rounded-[10px]
+                        bg-[#CCFF00]
+                        px-5
+                        text-[13px]
+                        font-bold
+                        text-[#090B0E]
+                        transition
+                        hover:brightness-90
+                      "
+                    >
+                      BROWSE WORKOUTS
+                    </Link>
+                  )}
+                </div>
+              </div>
+            )}
+
+          {/* Workout list */}
+          {isLoaded &&
+            filteredAndSortedWorkouts.length >
+              0 && (
+              <div className="mt-8 space-y-4">
+                {filteredAndSortedWorkouts.map(
+                  (workout) => (
+                    <article
+                      key={workout.id}
+                      className="
                         overflow-hidden
-                        rounded-[12px]
-                        md:aspect-auto
-                        md:h-[104px]
-                        md:w-[140px]
-                        lg:h-[80px]
-                        lg:w-[140px]
-                        lg:shrink-0
+                        rounded-[16px]
+                        border
+                        border-[#292D35]
+                        bg-[#171A20]
                       "
                     >
-                      <Image
-                        src={workout.image}
-                        alt={workout.name}
-                        fill
-                        sizes="
-                          (max-width: 767px) 100vw,
-                          (max-width: 1023px) 140px,
-                          140px
-                        "
-                        className="object-cover"
-                      />
-                    </div>
-
-                    {/* Content */}
-                    <div
-                      className="
-                        mt-4
-                        min-w-0
-                        md:mt-0
-                        md:flex
-                        md:flex-col
-                        md:justify-center
-                        lg:flex
-                        lg:flex-1
-                        lg:flex-row
-                        lg:items-center
-                      "
-                    >
-                      {/* Workout info */}
-                      <div className="min-w-0 lg:flex-1">
-                        <h2
-                          className="
-                            font-display
-                            text-[20px]
-                            font-medium
-                            uppercase
-                            leading-tight
-                            text-[#F4F4F5]
-                            md:text-[19px]
-                            lg:text-[18px]
-                          "
-                        >
-                          {workout.name}
-                        </h2>
-
-                        <p className="mt-1 text-[13px] leading-none text-[#8E929B]">
-                          {workout.equipment}
-                        </p>
-
-                        {/* Metrics */}
-                        <div
-                          className="
-                            mt-3
-                            flex
-                            flex-wrap
-                            items-center
-                            gap-x-4
-                            gap-y-2
-                            text-[12px]
-                            text-[#C4C6CB]
-                          "
-                        >
-                          <span className="flex items-center gap-1.5">
-                            <Clock3
-                              size={15}
-                              strokeWidth={2}
-                              className="text-[#CCFF00]"
-                            />
-
-                            {workout.duration} min
-                          </span>
-
-                          <span className="flex items-center gap-1.5">
-                            <Flame
-                              size={15}
-                              strokeWidth={0}
-                              fill="currentColor"
-                              className="text-[#CCFF00]"
-                            />
-
-                            {workout.caloriesBurned}{" "}
-                            kcal
-                          </span>
-
-                          <span className="flex items-center gap-1.5">
-                            <Star
-                              size={15}
-                              strokeWidth={2}
-                              className="text-[#CCFF00]"
-                            />
-
-                            {workout.rating}
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* Actions */}
                       <div
                         className="
-                          mt-5
-                          flex
-                          flex-wrap
-                          items-center
-                          gap-2.5
-                          md:mt-4
-                          lg:ml-5
-                          lg:mt-0
-                          lg:flex-nowrap
+                          grid
+                          grid-cols-1
+                          md:grid-cols-[190px_1fr]
+                          lg:grid-cols-[220px_1fr_auto]
                         "
                       >
+                        {/* Image */}
                         <Link
                           href={`/workout/${workout.id}`}
                           className="
-                            inline-flex
-                            h-[38px]
-                            items-center
-                            justify-center
-                            whitespace-nowrap
-                            rounded-full
-                            border
-                            border-[#444A55]
-                            px-5
-                            text-[12px]
-                            text-[#F4F4F5]
-                            transition-colors
-                            hover:border-[#6B717C]
+                            relative
+                            block
+                            aspect-[16/9]
+                            overflow-hidden
+                            md:aspect-auto
+                            md:min-h-[190px]
                           "
                         >
-                          View Details
+                          <Image
+                            src={workout.image}
+                            alt={workout.name}
+                            fill
+                            sizes="
+                              (max-width: 767px) 100vw,
+                              (max-width: 1023px) 190px,
+                              220px
+                            "
+                            className="
+                              object-cover
+                              transition-transform
+                              duration-300
+                              hover:scale-[1.03]
+                            "
+                          />
                         </Link>
 
-                        {activeTab ===
-                          "plan" && (
+                        {/* Workout information */}
+                        <div className="min-w-0 p-5 sm:p-6">
+                          {/* Tags */}
+                          <div className="flex flex-wrap gap-2">
+                            {workout.muscleGroups.map(
+                              (group) => (
+                                <span
+                                  key={group}
+                                  className="
+                                    rounded-full
+                                    bg-[#CCFF00]
+                                    px-3
+                                    py-1.5
+                                    text-[10px]
+                                    font-bold
+                                    leading-none
+                                    text-[#090B0E]
+                                  "
+                                >
+                                  {group}
+                                </span>
+                              )
+                            )}
+                          </div>
+
+                          <Link
+                            href={`/workout/${workout.id}`}
+                            className="
+                              mt-4
+                              inline-block
+                              font-display
+                              text-[22px]
+                              font-medium
+                              uppercase
+                              leading-tight
+                              text-[#F4F4F5]
+                              transition-colors
+                              hover:text-[#CCFF00]
+                            "
+                          >
+                            {workout.name}
+                          </Link>
+
+                          <p
+                            className="
+                              mt-2
+                              line-clamp-2
+                              max-w-[650px]
+                              text-[13px]
+                              leading-[1.55]
+                              text-[#8E929B]
+                            "
+                          >
+                            {workout.description}
+                          </p>
+
+                          {/* Metrics */}
+                          <div
+                            className="
+                              mt-5
+                              flex
+                              flex-wrap
+                              gap-x-5
+                              gap-y-2
+                              text-[12px]
+                              text-[#B5B7BC]
+                            "
+                          >
+                            <span
+                              className="
+                                inline-flex
+                                items-center
+                                gap-1.5
+                              "
+                            >
+                              <Clock3
+                                size={15}
+                                strokeWidth={2}
+                                className="text-[#8E929B]"
+                              />
+
+                              {workout.duration} min
+                            </span>
+
+                            <span
+                              className="
+                                inline-flex
+                                items-center
+                                gap-1.5
+                              "
+                            >
+                              <Flame
+                                size={15}
+                                strokeWidth={2}
+                                className="text-[#8E929B]"
+                              />
+
+                              {
+                                workout.caloriesBurned
+                              }{" "}
+                              kcal
+                            </span>
+
+                            <span
+                              className="
+                                inline-flex
+                                items-center
+                                gap-1.5
+                              "
+                            >
+                              <Star
+                                size={15}
+                                strokeWidth={2}
+                                className="text-[#CCFF00]"
+                              />
+
+                              {workout.rating}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div
+                          className="
+                            flex
+                            items-center
+                            gap-2
+                            border-t
+                            border-[#292D35]
+                            px-5
+                            py-4
+                            sm:px-6
+                            lg:flex-col
+                            lg:justify-center
+                            lg:border-l
+                            lg:border-t-0
+                            lg:px-5
+                          "
+                        >
+                          {activeTab === "plan" && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                handleDone(
+                                  workout
+                                )
+                              }
+                              className="
+                                inline-flex
+                                h-[40px]
+                                flex-1
+                                items-center
+                                justify-center
+                                gap-2
+                                rounded-[10px]
+                                bg-[#CCFF00]
+                                px-4
+                                text-[12px]
+                                font-bold
+                                text-[#090B0E]
+                                transition
+                                hover:brightness-90
+                                lg:w-[145px]
+                                lg:flex-none
+                              "
+                            >
+                              <Check
+                                size={15}
+                                strokeWidth={2.5}
+                              />
+
+                              MARK AS DONE
+                            </button>
+                          )}
+
                           <button
                             type="button"
                             onClick={() =>
-                              handleMarkAsDone(
+                              handleRemove(
                                 workout
                               )
                             }
+                            aria-label={`Remove ${workout.name}`}
                             className="
                               inline-flex
-                              h-[38px]
+                              h-[40px]
+                              w-[40px]
+                              shrink-0
                               items-center
                               justify-center
-                              gap-2
-                              whitespace-nowrap
-                              rounded-full
-                              bg-[#CCFF00]
-                              px-5
-                              text-[12px]
-                              font-semibold
-                              text-[#090B0E]
-                              transition
-                              hover:brightness-90
+                              rounded-[10px]
+                              border
+                              border-[#353942]
+                              text-[#A4A7AE]
+                              transition-colors
+                              hover:border-[#555B66]
+                              hover:bg-[#20242B]
+                              hover:text-white
+                              lg:w-[145px]
                             "
                           >
-                            <Check
-                              size={15}
-                              strokeWidth={2.5}
+                            <X
+                              size={17}
+                              strokeWidth={2}
                             />
 
-                            Mark as Done
+                            <span className="ml-2 hidden text-[12px] font-semibold lg:inline">
+                              REMOVE
+                            </span>
                           </button>
-                        )}
-
-                        <button
-                          type="button"
-                          aria-label={
-                            activeTab === "plan"
-                              ? `Remove ${workout.name} from today's plan`
-                              : `Remove ${workout.name} from saved workouts`
-                          }
-                          onClick={() =>
-                            handleRemove(
-                              workout
-                            )
-                          }
-                          className="
-                            flex
-                            h-9
-                            w-9
-                            shrink-0
-                            items-center
-                            justify-center
-                            rounded-full
-                            text-[#858A94]
-                            transition-colors
-                            hover:text-[#F4F4F5]
-                          "
-                        >
-                          <X
-                            size={17}
-                            strokeWidth={1.8}
-                          />
-                        </button>
+                        </div>
                       </div>
-                    </div>
-                  </article>
-                )
-              )}
-            </div>
-          )}
+                    </article>
+                  )
+                )}
+              </div>
+            )}
+        </div>
       </section>
     </main>
   );
 }
 
-function MyPlanFallback() {
+function MyPlanLoading() {
   return (
-    <main className="min-h-screen bg-[#0D0F12]">
-      <div className="flex min-h-[300px] items-center justify-center">
-        <p className="text-[14px] text-[#8E929B]">
-          Loading workouts...
-        </p>
-      </div>
+    <main className="min-h-screen bg-[#0D0F13] text-white">
+      <section className="px-4 pb-24 pt-8 sm:px-5 md:px-6 md:pt-10 lg:px-8 lg:pt-12">
+        <div className="mx-auto max-w-[1200px]">
+          <div className="h-10 w-40 animate-pulse rounded-lg bg-[#191C22]" />
+
+          <div className="mt-4 h-4 w-full max-w-[520px] animate-pulse rounded bg-[#191C22]" />
+
+          <div className="mt-8 h-[46px] w-full max-w-[420px] animate-pulse rounded-[12px] bg-[#191C22]" />
+
+          <div className="mt-8 h-[120px] animate-pulse rounded-[16px] bg-[#191C22]" />
+
+          <div className="mt-8 h-[220px] animate-pulse rounded-[16px] bg-[#191C22]" />
+        </div>
+      </section>
     </main>
   );
 }
 
 export default function MyPlanPage() {
   return (
-    <Suspense fallback={<MyPlanFallback />}>
+    <Suspense fallback={<MyPlanLoading />}>
       <MyPlanContent />
     </Suspense>
   );
