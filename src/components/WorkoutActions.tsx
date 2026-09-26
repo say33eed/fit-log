@@ -28,7 +28,10 @@ export default function WorkoutActions({
     const saved = isSaved(workout.id);
 
     const handleAddToPlan = () => {
-        if (inPlan) return;
+        if (inPlan) {
+            toast.error("Already in your plan");
+            return;
+        }
 
         addToPlan(workout);
         toast.success("Added to today's plan");
@@ -49,26 +52,27 @@ export default function WorkoutActions({
             <button
                 type="button"
                 onClick={handleAddToPlan}
-                disabled={inPlan}
-                className="
-          inline-flex
-          h-[44px]
-          w-full
-          items-center
-          justify-center
-          gap-2
-          rounded-xl
-          bg-[#CCFF00]
-          px-5
-          text-[14px]
-          font-bold
-          text-[#090B0E]
-          transition
-          hover:brightness-90
-          disabled:cursor-default
-          disabled:brightness-75
-          md:w-auto
-        "
+                aria-disabled={inPlan}
+                className={`
+    inline-flex
+    h-[44px]
+    w-full
+    items-center
+    justify-center
+    gap-2
+    rounded-xl
+    bg-[#CCFF00]
+    px-5
+    text-[14px]
+    font-bold
+    text-[#090B0E]
+    transition
+    md:w-auto
+    ${inPlan
+                        ? "cursor-not-allowed opacity-60"
+                        : "cursor-pointer hover:brightness-90"
+                    }
+  `}
             >
                 {inPlan ? (
                     <CalendarCheck size={17} strokeWidth={2} />
