@@ -3,6 +3,7 @@ import { Toaster } from "react-hot-toast";
 
 import "./globals.css";
 
+import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { WorkoutProvider } from "@/context/WorkoutContext";
 
@@ -19,11 +20,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-[#0D0F12] text-[#F4F4F5]">
+      <body className="bg-[#0D0F12] text-[#F4F4F5]">
         <WorkoutProvider>
-          <Navbar />
+          <div className="flex min-h-screen flex-col">
+            <Navbar />
 
-          {children}
+            <div className="flex-1">
+              {children}
+            </div>
+
+            <Footer />
+          </div>
 
           <Toaster
             position="top-right"
