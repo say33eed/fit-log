@@ -1,9 +1,9 @@
-import Navbar from "@/components/Navbar";
+// import Navbar from "@/components/Navbar";
 
 export default function Loading() {
   return (
     <main className="min-h-screen bg-[#0D0F13] text-white">
-      <Navbar />
+      {/* <Navbar /> */}
 
       <section className="px-4 pb-24 pt-8 sm:px-5 md:px-6 md:pt-10 lg:px-8 lg:pt-12">
         <div
