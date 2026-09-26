@@ -13,7 +13,7 @@ export default async function WorkoutLibrary() {
                         className="
               font-display
               text-[30px]
-              font-semibold
+              font-bold
               uppercase
               leading-none
               text-[#F4F4F5]
