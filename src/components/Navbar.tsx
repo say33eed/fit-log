@@ -12,28 +12,58 @@ export default function Navbar() {
   const { plan, saved, isLoaded } = useWorkout();
 
   const pathname = usePathname();
-
   const [menuOpen, setMenuOpen] = useState(false);
 
   const isWorkouts =
     pathname === "/" ||
     pathname.startsWith("/workout/");
 
-  const isMyPlan =
-    pathname === "/my-plan";
+  const isMyPlan = pathname === "/my-plan";
 
-  /*
-   * Keep server/client hydration identical.
-   * localStorage-backed counts appear only
-   * after the provider has hydrated.
-   */
-  const planCount = isLoaded
-    ? plan.length
-    : 0;
+  const planCount = isLoaded ? plan.length : 0;
+  const savedCount = isLoaded ? saved.length : 0;
 
-  const savedCount = isLoaded
-    ? saved.length
-    : 0;
+  const closeMenu = () => {
+    setMenuOpen(false);
+  };
+
+  const handleWorkoutsClick = (
+    event: React.MouseEvent<HTMLAnchorElement>
+  ) => {
+    closeMenu();
+
+    /*
+     * When we're already on the homepage,
+     * manually scroll to the library.
+     *
+     * This also fixes the case where #library
+     * is already in the URL and the user has
+     * manually scrolled back to the top.
+     */
+    if (pathname === "/") {
+      const library =
+        document.getElementById("library");
+
+      if (library) {
+        event.preventDefault();
+
+        library.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+
+        /*
+         * Keep #library in the URL without
+         * triggering another Next.js navigation.
+         */
+        window.history.replaceState(
+          null,
+          "",
+          "/#library"
+        );
+      }
+    }
+  };
 
   return (
     <header
@@ -70,9 +100,7 @@ export default function Navbar() {
           aria-label="Toggle navigation"
           aria-expanded={menuOpen}
           onClick={() =>
-            setMenuOpen(
-              (open) => !open
-            )
+            setMenuOpen((open) => !open)
           }
           className={`
             mr-3
@@ -87,7 +115,6 @@ export default function Navbar() {
             text-[#C9CBD0]
             transition-colors
             lg:hidden
-
             ${
               menuOpen
                 ? "border-[#D5D5D5]"
@@ -104,6 +131,8 @@ export default function Navbar() {
         {/* Brand */}
         <Link
           href="/"
+          onClick={closeMenu}
+          aria-label="Go to FitLog home"
           className="
             flex
             shrink-0
@@ -141,6 +170,7 @@ export default function Navbar() {
 
         {/* Desktop navigation */}
         <nav
+          aria-label="Main navigation"
           className="
             absolute
             left-1/2
@@ -152,14 +182,14 @@ export default function Navbar() {
           "
         >
           <Link
-            href="/"
+            href="/#library"
+            onClick={handleWorkoutsClick}
             className={`
               rounded-full
               px-4
               py-2
               text-[14px]
               transition-colors
-
               ${
                 isWorkouts
                   ? "bg-[#171A20] font-semibold text-[#CCFF00]"
@@ -171,18 +201,17 @@ export default function Navbar() {
           </Link>
 
           <Link
-            href="/my-plan"
+            href="/my-plan?tab=plan"
             className={`
               rounded-full
               px-4
               py-2
               text-[14px]
               transition-colors
-
               ${
                 isMyPlan
                   ? "bg-[#171A20] font-semibold text-[#CCFF00]"
-                  : "text-[#F1F1F2] hover:bg-[#171A20] hover:text-[#CCFF00]"
+                  : "text-[#F1F1F2] hover:bg-[#171A20]"
               }
             `}
           >
@@ -190,7 +219,7 @@ export default function Navbar() {
           </Link>
         </nav>
 
-        {/* Counters */}
+        {/* Plan / Saved counters */}
         <div
           className="
             ml-auto
@@ -201,7 +230,8 @@ export default function Navbar() {
           "
         >
           <Link
-            href="/my-plan"
+            href="/my-plan?tab=plan"
+            aria-label={`Open today's plan with ${planCount} workouts`}
             className="
               flex
               h-10
@@ -238,7 +268,8 @@ export default function Navbar() {
           </Link>
 
           <Link
-            href="/my-plan"
+            href="/my-plan?tab=saved"
+            aria-label={`Open saved workouts with ${savedCount} workouts`}
             className="
               flex
               h-10
@@ -279,6 +310,7 @@ export default function Navbar() {
         {/* Mobile dropdown */}
         {menuOpen && (
           <nav
+            aria-label="Mobile navigation"
             className="
               absolute
               left-4
@@ -290,7 +322,6 @@ export default function Navbar() {
               border-[#24272D]
               bg-[#171A20]
               p-2
-              py-2
               shadow-xl
               sm:left-5
               md:left-8
@@ -298,10 +329,8 @@ export default function Navbar() {
             "
           >
             <Link
-              href="/"
-              onClick={() =>
-                setMenuOpen(false)
-              }
+              href="/#library"
+              onClick={handleWorkoutsClick}
               className="
                 block
                 rounded-full
@@ -317,10 +346,8 @@ export default function Navbar() {
             </Link>
 
             <Link
-              href="/my-plan"
-              onClick={() =>
-                setMenuOpen(false)
-              }
+              href="/my-plan?tab=plan"
+              onClick={closeMenu}
               className="
                 block
                 rounded-full
