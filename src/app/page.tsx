@@ -1,5 +1,9 @@
+import { Suspense } from "react";
+
 import Hero from "@/components/Hero";
 import Navbar from "@/components/Navbar";
+import WorkoutLibrary from "@/components/WorkoutLibrary";
+import LibraryLoading from "@/components/LibraryLoading";
 
 export default function Home() {
   return (
@@ -8,8 +12,10 @@ export default function Home() {
 
       <Hero />
 
-      <section id="library">
-        {/* THE LIBRARY will be built here */}
+      <section id="library" className="scroll-mt-6">
+        <Suspense fallback={<LibraryLoading />}>
+          <WorkoutLibrary />
+        </Suspense>
       </section>
     </main>
   );
