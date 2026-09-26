@@ -56,7 +56,7 @@ export default function Navbar() {
                         className={`rounded-4xl px-4 py-2 text-[14px] transition-colors ${
                             isWorkouts
                                 ? "bg-[#171a20] font-semibold text-[#ccff00]"
-                                : "text-[#f1f1f2] hover:bg-[#171a20] hover:text-[#ccff00]"
+                                : "text-[#f1f1f2] hover:bg-[#171a20]"
                         }`}
                     >
                         Workouts
@@ -67,7 +67,7 @@ export default function Navbar() {
                         className={`rounded-4xl px-4 py-2 text-[14px] transition-colors ${
                             isMyPlan
                                 ? "bg-[#171a20] font-semibold text-[#ccff00]"
-                                : "text-[#f1f1f2] hover:bg-[#171a20] hover:text-[#ccff00]"
+                                : "text-[#f1f1f2] hover:bg-[#171a20]"
                         }`}
                     >
                         My Plan
