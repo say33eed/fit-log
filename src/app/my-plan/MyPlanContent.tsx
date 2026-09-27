@@ -3,15 +3,18 @@
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import {
-  Check,
-  ChevronDown,
-  Clock3,
-  Flame,
-  Search,
-  Star,
-  X,
+    useRouter,
+    useSearchParams,
+} from "next/navigation";
+import {
+    Check,
+    ChevronDown,
+    Clock3,
+    Flame,
+    Search,
+    Star,
+    X,
 } from "lucide-react";
 
 import { useWorkout } from "@/context/WorkoutContext";
@@ -20,202 +23,193 @@ import type { Workout } from "@/types/workout";
 type Tab = "plan" | "saved";
 
 type SortOption =
-  | "duration"
-  | "calories"
-  | "rating";
+    | "duration"
+    | "calories"
+    | "rating";
 
 const sortLabels: Record<SortOption, string> = {
-  duration: "Duration",
-  calories: "Calories",
-  rating: "Rating",
+    duration: "Duration",
+    calories: "Calories",
+    rating: "Rating",
 };
 
 export default function MyPlanContent() {
-  const searchParams = useSearchParams();
+    const router = useRouter();
+    const searchParams = useSearchParams();
 
-  const {
-    plan,
-    saved,
-    isLoaded,
-    removeFromPlan,
-    toggleSaved,
-  } = useWorkout();
+    const {
+        plan,
+        saved,
+        isLoaded,
+        removeFromPlan,
+        toggleSaved,
+    } = useWorkout();
 
-  const initialTab: Tab =
-    searchParams.get("tab") === "saved"
-      ? "saved"
-      : "plan";
 
-  const [activeTab, setActiveTab] =
-    useState<Tab>(initialTab);
+    const activeTab: Tab =
+        searchParams.get("tab") === "saved"
+            ? "saved"
+            : "plan";
 
-  const [searchQuery, setSearchQuery] =
-    useState("");
+    const [searchQuery, setSearchQuery] =
+        useState("");
 
-  const [sortBy, setSortBy] =
-    useState<SortOption>("duration");
+    const [sortBy, setSortBy] =
+        useState<SortOption>("duration");
 
-  const [sortOpen, setSortOpen] =
-    useState(false);
+    const [sortOpen, setSortOpen] =
+        useState(false);
 
-  /* =================================
-     TAB CHANGE
-  ================================== */
+    /* =================================
+       TAB CHANGE
+    ================================== */
 
-  const handleTabChange = (tab: Tab) => {
-    setActiveTab(tab);
-    setSearchQuery("");
-    setSortOpen(false);
+    const handleTabChange = (tab: Tab) => {
+        setSearchQuery("");
+        setSortOpen(false);
 
-    window.history.replaceState(
-      null,
-      "",
-      `/my-plan?tab=${tab}`
-    );
-  };
+        router.replace(`/my-plan?tab=${tab}`, {
+            scroll: false,
+        });
+    };
 
-  /* =================================
-     WORKOUT ACTIONS
-  ================================== */
+    /* =================================
+       WORKOUT ACTIONS
+    ================================== */
 
-  const handleDone = (workout: Workout) => {
-    removeFromPlan(workout.id);
-  };
+    const handleDone = (workout: Workout) => {
+        removeFromPlan(workout.id);
+    };
 
-  const handleRemove = (workout: Workout) => {
-    if (activeTab === "plan") {
-      removeFromPlan(workout.id);
-      return;
+    const handleRemove = (workout: Workout) => {
+        if (activeTab === "plan") {
+            removeFromPlan(workout.id);
+            return;
+        }
+
+        toggleSaved(workout);
+    };
+
+    /* =================================
+       ACTIVE WORKOUTS
+    ================================== */
+
+    const activeWorkouts =
+        activeTab === "plan" ? plan : saved;
+
+    /* =================================
+       LIVE DATA / SUMMARY
+    ================================== */
+
+    const summary = useMemo(() => {
+        return activeWorkouts.reduce(
+            (totals, workout) => {
+                return {
+                    exercises: totals.exercises + 1,
+                    minutes:
+                        totals.minutes + workout.duration,
+                    calories:
+                        totals.calories +
+                        workout.caloriesBurned,
+                };
+            },
+            {
+                exercises: 0,
+                minutes: 0,
+                calories: 0,
+            }
+        );
+    }, [activeWorkouts]);
+
+    /* =================================
+       SEARCH
+    ================================== */
+
+    const filteredWorkouts = useMemo(() => {
+        const query = searchQuery
+            .trim()
+            .toLowerCase();
+
+        if (!query) {
+            return activeWorkouts;
+        }
+
+        return activeWorkouts.filter((workout) => {
+            const searchableValues = [
+                workout.name,
+                workout.equipment,
+                workout.difficulty,
+                ...workout.muscleGroups,
+            ];
+
+            return searchableValues.some((value) =>
+                value.toLowerCase().includes(query)
+            );
+        });
+    }, [activeWorkouts, searchQuery]);
+
+    /* =================================
+       SORT
+    ================================== */
+
+    const displayedWorkouts = useMemo(() => {
+        const workouts = [...filteredWorkouts];
+
+        switch (sortBy) {
+            case "calories":
+                return workouts.sort(
+                    (a, b) =>
+                        b.caloriesBurned -
+                        a.caloriesBurned
+                );
+
+            case "rating":
+                return workouts.sort(
+                    (a, b) => b.rating - a.rating
+                );
+
+            case "duration":
+            default:
+                return workouts.sort(
+                    (a, b) =>
+                        a.duration - b.duration
+                );
+        }
+    }, [filteredWorkouts, sortBy]);
+
+    /* =================================
+       LOADING
+    ================================== */
+
+    if (!isLoaded) {
+        return (
+            <main className="min-h-screen bg-[#0D0F13] text-white">
+                <section className="px-4 py-8 sm:px-6 md:px-8 md:py-10 lg:py-12">
+                    <div className="mx-auto max-w-[1200px]">
+                        <div className="h-9 w-40 animate-pulse rounded-lg bg-[#171A20]" />
+
+                        <div className="mt-3 h-4 w-[320px] max-w-full animate-pulse rounded bg-[#171A20]" />
+
+                        <div className="mt-8 h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
+
+                        <div className="mt-8 h-[42px] animate-pulse rounded-[10px] bg-[#171A20]" />
+
+                        <div className="mt-6 space-y-3">
+                            <div className="h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
+
+                            <div className="h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
+                        </div>
+                    </div>
+                </section>
+            </main>
+        );
     }
 
-    toggleSaved(workout);
-  };
 
-  /* =================================
-     ACTIVE WORKOUTS
-  ================================== */
-
-  const activeWorkouts =
-    activeTab === "plan" ? plan : saved;
-
-  /* =================================
-     LIVE DATA / SUMMARY
-  ================================== */
-
-  const summary = useMemo(() => {
-    return activeWorkouts.reduce(
-      (totals, workout) => {
-        return {
-          exercises: totals.exercises + 1,
-          minutes:
-            totals.minutes + workout.duration,
-          calories:
-            totals.calories +
-            workout.caloriesBurned,
-        };
-      },
-      {
-        exercises: 0,
-        minutes: 0,
-        calories: 0,
-      }
-    );
-  }, [activeWorkouts]);
-
-  /* =================================
-     SEARCH
-  ================================== */
-
-  const filteredWorkouts = useMemo(() => {
-    const query = searchQuery
-      .trim()
-      .toLowerCase();
-
-    if (!query) {
-      return activeWorkouts;
-    }
-
-    return activeWorkouts.filter((workout) => {
-      const searchableValues = [
-        workout.name,
-        workout.equipment,
-        workout.difficulty,
-        ...workout.muscleGroups,
-      ];
-
-      return searchableValues.some((value) =>
-        value.toLowerCase().includes(query)
-      );
-    });
-  }, [activeWorkouts, searchQuery]);
-
-  /* =================================
-     SORT
-  ================================== */
-
-  const displayedWorkouts = useMemo(() => {
-    const workouts = [...filteredWorkouts];
-
-    switch (sortBy) {
-      case "calories":
-        return workouts.sort(
-          (a, b) =>
-            b.caloriesBurned -
-            a.caloriesBurned
-        );
-
-      case "rating":
-        return workouts.sort(
-          (a, b) => b.rating - a.rating
-        );
-
-      case "duration":
-      default:
-        return workouts.sort(
-          (a, b) =>
-            a.duration - b.duration
-        );
-    }
-  }, [filteredWorkouts, sortBy]);
-
-  /* =================================
-     LOADING
-  ================================== */
-
-  if (!isLoaded) {
     return (
-      <main className="min-h-screen bg-[#0D0F13] text-white">
-        <section className="px-4 py-8 sm:px-6 md:px-8 md:py-10 lg:py-12">
-          <div className="mx-auto max-w-[1200px]">
-            <div className="h-9 w-40 animate-pulse rounded-lg bg-[#171A20]" />
-
-            <div className="mt-3 h-4 w-[320px] max-w-full animate-pulse rounded bg-[#171A20]" />
-
-            <div className="mt-8 h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
-
-            <div className="mt-8 h-[42px] animate-pulse rounded-[10px] bg-[#171A20]" />
-
-            <div className="mt-6 space-y-3">
-              <div className="h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
-
-              <div className="h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
-            </div>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
-  // =========================================================
-  // FROM HERE DOWN:
-  // paste your EXISTING return (...) from the original file.
-  // Do not use the blank placeholder from my previous answer.
-  // =========================================================
-
-  return (
-    <main className="min-h-screen bg-[#0D0F13] text-white">
-      <section
-        className="
+        <main className="min-h-screen bg-[#0D0F13] text-white">
+            <section
+                className="
           px-4
           pb-16
           pt-8
@@ -229,13 +223,13 @@ export default function MyPlanContent() {
           lg:pb-24
           lg:pt-12
         "
-      >
-        <div className="mx-auto max-w-[1200px]">
-          {/* PAGE HEADER */}
+            >
+                <div className="mx-auto max-w-[1200px]">
+                    {/* PAGE HEADER */}
 
-          <header>
-            <h1
-              className="
+                    <header>
+                        <h1
+                            className="
                 font-display
                 text-[28px]
                 font-semibold
@@ -247,12 +241,12 @@ export default function MyPlanContent() {
                 sm:text-[30px]
                 lg:text-[32px]
               "
-            >
-              MY PLAN
-            </h1>
+                        >
+                            MY PLAN
+                        </h1>
 
-            <p
-              className="
+                        <p
+                            className="
                 mt-3
                 text-[12px]
                 leading-[1.6]
@@ -260,16 +254,16 @@ export default function MyPlanContent() {
 
                 sm:text-[13px]
               "
-            >
-              Cap of five lifts for today. Finish
-              them, then load more.
-            </p>
-          </header>
+                        >
+                            Cap of five lifts for today. Finish
+                            them, then load more.
+                        </p>
+                    </header>
 
-          {/* LIVE DATA */}
+                    {/* LIVE DATA */}
 
-          <div
-            className="
+                    <div
+                        className="
               mt-7
               grid
               grid-cols-3
@@ -281,80 +275,80 @@ export default function MyPlanContent() {
 
               sm:mt-8
             "
-          >
-            <div
-              className="
+                    >
+                        <div
+                            className="
                 flex min-w-0 flex-col items-center
                 justify-center px-2 py-5 text-center
                 sm:px-6 sm:py-6 lg:px-8 lg:py-7
               "
-            >
-              <p className="w-full truncate text-center text-[9px] text-[#777B84] sm:text-[11px]">
-                Exercises
-              </p>
+                        >
+                            <p className="w-full truncate text-center text-[9px] text-[#777B84] sm:text-[11px]">
+                                Exercises
+                            </p>
 
-              <p className="font-display mt-2 text-center text-[27px] font-semibold leading-none text-[#CCFF00] sm:text-[31px] lg:text-[34px]">
-                {summary.exercises}
-              </p>
-            </div>
+                            <p className="font-display mt-2 text-center text-[27px] font-semibold leading-none text-[#CCFF00] sm:text-[31px] lg:text-[34px]">
+                                {summary.exercises}
+                            </p>
+                        </div>
 
-            <div
-              className="
+                        <div
+                            className="
                 flex min-w-0 flex-col items-center
                 justify-center border-l border-[#252932]
                 px-2 py-5 text-center
                 sm:px-6 sm:py-6 lg:px-8 lg:py-7
               "
-            >
-              <p className="w-full truncate text-center text-[9px] text-[#777B84] sm:text-[11px]">
-                Minutes
-              </p>
+                        >
+                            <p className="w-full truncate text-center text-[9px] text-[#777B84] sm:text-[11px]">
+                                Minutes
+                            </p>
 
-              <p className="font-display mt-2 text-center text-[27px] font-semibold leading-none text-[#F4F4F5] sm:text-[31px] lg:text-[34px]">
-                {summary.minutes}
-              </p>
-            </div>
+                            <p className="font-display mt-2 text-center text-[27px] font-semibold leading-none text-[#F4F4F5] sm:text-[31px] lg:text-[34px]">
+                                {summary.minutes}
+                            </p>
+                        </div>
 
-            <div
-              className="
+                        <div
+                            className="
                 flex min-w-0 flex-col items-center
                 justify-center border-l border-[#252932]
                 px-2 py-5 text-center
                 sm:px-6 sm:py-6 lg:px-8 lg:py-7
               "
-            >
-              <p className="w-full truncate text-center text-[9px] text-[#777B84] sm:text-[11px]">
-                Calories
-              </p>
+                        >
+                            <p className="w-full truncate text-center text-[9px] text-[#777B84] sm:text-[11px]">
+                                Calories
+                            </p>
 
-              <p className="font-display mt-2 text-center text-[27px] font-semibold leading-none text-[#F4F4F5] sm:text-[31px] lg:text-[34px]">
-                {summary.calories}
-              </p>
-            </div>
-          </div>
+                            <p className="font-display mt-2 text-center text-[27px] font-semibold leading-none text-[#F4F4F5] sm:text-[31px] lg:text-[34px]">
+                                {summary.calories}
+                            </p>
+                        </div>
+                    </div>
 
-          {/* TABS / SEARCH / SORT */}
+                    {/* TABS / SEARCH / SORT */}
 
-          <div
-            className="
+                    <div
+                        className="
               mt-6 flex flex-col gap-3
               md:mt-7 md:flex-row md:items-center md:gap-3
               lg:mt-8 lg:gap-5
             "
-          >
-            <div
-              className="
+                    >
+                        <div
+                            className="
                 inline-flex w-fit shrink-0
                 rounded-[10px] border border-[#242830]
                 bg-[#171A20] p-[3px]
               "
-            >
-              <button
-                type="button"
-                onClick={() =>
-                  handleTabChange("plan")
-                }
-                className={`
+                        >
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleTabChange("plan")
+                                }
+                                className={`
                   rounded-[7px]
                   px-4
                   py-[7px]
@@ -364,22 +358,21 @@ export default function MyPlanContent() {
                   md:text-[11px]
                   lg:px-5
                   lg:text-[12px]
-                  ${
-                    activeTab === "plan"
-                      ? "bg-[#292D35] font-semibold text-[#F4F4F5]"
-                      : "text-[#777B84] hover:text-[#F4F4F5]"
-                  }
+                  ${activeTab === "plan"
+                                        ? "bg-[#292D35] font-semibold text-[#F4F4F5]"
+                                        : "text-[#777B84] hover:text-[#F4F4F5]"
+                                    }
                 `}
-              >
-                Today&apos;s Plan
-              </button>
+                            >
+                                Today&apos;s Plan
+                            </button>
 
-              <button
-                type="button"
-                onClick={() =>
-                  handleTabChange("saved")
-                }
-                className={`
+                            <button
+                                type="button"
+                                onClick={() =>
+                                    handleTabChange("saved")
+                                }
+                                className={`
                   rounded-[7px]
                   px-4
                   py-[7px]
@@ -389,21 +382,20 @@ export default function MyPlanContent() {
                   md:text-[11px]
                   lg:px-5
                   lg:text-[12px]
-                  ${
-                    activeTab === "saved"
-                      ? "bg-[#292D35] font-semibold text-[#F4F4F5]"
-                      : "text-[#777B84] hover:text-[#F4F4F5]"
-                  }
+                  ${activeTab === "saved"
+                                        ? "bg-[#292D35] font-semibold text-[#F4F4F5]"
+                                        : "text-[#777B84] hover:text-[#F4F4F5]"
+                                    }
                 `}
-              >
-                Saved
-              </button>
-            </div>
+                            >
+                                Saved
+                            </button>
+                        </div>
 
-            {/* SEARCH */}
+                        {/* SEARCH */}
 
-            <div
-              className="
+                        <div
+                            className="
                 flex
                 h-[40px]
                 w-full
@@ -421,29 +413,29 @@ export default function MyPlanContent() {
                 md:max-w-[360px]
                 md:flex-1
               "
-            >
-              <Search
-                size={15}
-                strokeWidth={1.8}
-                aria-hidden="true"
-                className="shrink-0 text-[#777B84]"
-              />
+                        >
+                            <Search
+                                size={15}
+                                strokeWidth={1.8}
+                                aria-hidden="true"
+                                className="shrink-0 text-[#777B84]"
+                            />
 
-              <input
-                type="search"
-                value={searchQuery}
-                onChange={(event) =>
-                  setSearchQuery(
-                    event.target.value
-                  )
-                }
-                placeholder={
-                  activeTab === "plan"
-                    ? "Search today's plan..."
-                    : "Search saved workouts..."
-                }
-                aria-label="Search workouts"
-                className="
+                            <input
+                                type="search"
+                                value={searchQuery}
+                                onChange={(event) =>
+                                    setSearchQuery(
+                                        event.target.value
+                                    )
+                                }
+                                placeholder={
+                                    activeTab === "plan"
+                                        ? "Search today's plan..."
+                                        : "Search saved workouts..."
+                                }
+                                aria-label="Search workouts"
+                                className="
                   h-full
                   min-w-0
                   flex-1
@@ -456,16 +448,16 @@ export default function MyPlanContent() {
 
                   lg:text-[12px]
                 "
-              />
+                            />
 
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    setSearchQuery("")
-                  }
-                  aria-label="Clear search"
-                  className="
+                            {searchQuery && (
+                                <button
+                                    type="button"
+                                    onClick={() =>
+                                        setSearchQuery("")
+                                    }
+                                    aria-label="Clear search"
+                                    className="
                     flex
                     h-6
                     w-6
@@ -478,19 +470,19 @@ export default function MyPlanContent() {
                     hover:bg-[#242830]
                     hover:text-white
                   "
-                >
-                  <X
-                    size={14}
-                    aria-hidden="true"
-                  />
-                </button>
-              )}
-            </div>
+                                >
+                                    <X
+                                        size={14}
+                                        aria-hidden="true"
+                                    />
+                                </button>
+                            )}
+                        </div>
 
-            {/* SORT */}
+                        {/* SORT */}
 
-            <div
-              className="
+                        <div
+                            className="
                 flex
                 shrink-0
                 items-center
@@ -498,22 +490,22 @@ export default function MyPlanContent() {
                 gap-3
                 md:justify-end
               "
-            >
-              <span className="shrink-0 whitespace-nowrap text-[10px] text-[#777B84] lg:text-[11px]">
-                Sort By
-              </span>
+                        >
+                            <span className="shrink-0 whitespace-nowrap text-[10px] text-[#777B84] lg:text-[11px]">
+                                Sort By
+                            </span>
 
-              <div className="relative">
-                <button
-                  type="button"
-                  aria-haspopup="listbox"
-                  aria-expanded={sortOpen}
-                  onClick={() =>
-                    setSortOpen(
-                      (open) => !open
-                    )
-                  }
-                  className="
+                            <div className="relative">
+                                <button
+                                    type="button"
+                                    aria-haspopup="listbox"
+                                    aria-expanded={sortOpen}
+                                    onClick={() =>
+                                        setSortOpen(
+                                            (open) => !open
+                                        )
+                                    }
+                                    className="
                     flex
                     h-[40px]
                     min-w-[105px]
@@ -535,27 +527,26 @@ export default function MyPlanContent() {
                     lg:px-4
                     lg:text-[12px]
                   "
-                >
-                  <span>
-                    {sortLabels[sortBy]}
-                  </span>
+                                >
+                                    <span>
+                                        {sortLabels[sortBy]}
+                                    </span>
 
-                  <ChevronDown
-                    size={14}
-                    strokeWidth={1.8}
-                    aria-hidden="true"
-                    className={`shrink-0 transition-transform ${
-                      sortOpen
-                        ? "rotate-180"
-                        : ""
-                    }`}
-                  />
-                </button>
+                                    <ChevronDown
+                                        size={14}
+                                        strokeWidth={1.8}
+                                        aria-hidden="true"
+                                        className={`shrink-0 transition-transform ${sortOpen
+                                                ? "rotate-180"
+                                                : ""
+                                            }`}
+                                    />
+                                </button>
 
-                {sortOpen && (
-                  <div
-                    role="listbox"
-                    className="
+                                {sortOpen && (
+                                    <div
+                                        role="listbox"
+                                        className="
                       absolute
                       left-0
                       top-[46px]
@@ -572,56 +563,55 @@ export default function MyPlanContent() {
                       md:left-auto
                       md:right-0
                     "
-                  >
-                    {(
-                      Object.keys(
-                        sortLabels
-                      ) as SortOption[]
-                    ).map((option) => (
-                      <button
-                        key={option}
-                        type="button"
-                        role="option"
-                        aria-selected={
-                          sortBy === option
-                        }
-                        onClick={() => {
-                          setSortBy(option);
-                          setSortOpen(false);
-                        }}
-                        className={`block w-full rounded-[7px] px-3 py-2 text-left text-[12px] transition-colors ${
-                          sortBy === option
-                            ? "bg-[#292D35] text-white"
-                            : "text-[#A4A7AE] hover:bg-[#20242B] hover:text-white"
-                        }`}
-                      >
-                        {sortLabels[option]}
-                      </button>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+                                    >
+                                        {(
+                                            Object.keys(
+                                                sortLabels
+                                            ) as SortOption[]
+                                        ).map((option) => (
+                                            <button
+                                                key={option}
+                                                type="button"
+                                                role="option"
+                                                aria-selected={
+                                                    sortBy === option
+                                                }
+                                                onClick={() => {
+                                                    setSortBy(option);
+                                                    setSortOpen(false);
+                                                }}
+                                                className={`block w-full rounded-[7px] px-3 py-2 text-left text-[12px] transition-colors ${sortBy === option
+                                                        ? "bg-[#292D35] text-white"
+                                                        : "text-[#A4A7AE] hover:bg-[#20242B] hover:text-white"
+                                                    }`}
+                                            >
+                                                {sortLabels[option]}
+                                            </button>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
 
-          {/* WORKOUT LIST */}
+                    {/* WORKOUT LIST */}
 
-          <div className="mt-5 space-y-3 sm:mt-6">
-            {displayedWorkouts.length > 0 ? (
-              displayedWorkouts.map(
-                (workout) => (
-                  <article
-                    key={workout.id}
-                    className="
+                    <div className="mt-5 space-y-3 sm:mt-6">
+                        {displayedWorkouts.length > 0 ? (
+                            displayedWorkouts.map(
+                                (workout) => (
+                                    <article
+                                        key={workout.id}
+                                        className="
                       overflow-hidden
                       rounded-[16px]
                       border
                       border-[#252932]
                       bg-[#171A20]
                     "
-                  >
-                    <div
-                      className="
+                                    >
+                                        <div
+                                            className="
                         grid
                         grid-cols-1
 
@@ -631,11 +621,11 @@ export default function MyPlanContent() {
 
                         lg:grid-cols-[168px_minmax(0,1fr)_auto]
                       "
-                    >
-                      <Link
-                        href={`/workout/${workout.id}`}
-                        aria-label={`View ${workout.name} details`}
-                        className="
+                                        >
+                                            <Link
+                                                href={`/workout/${workout.id}`}
+                                                aria-label={`View ${workout.name} details`}
+                                                className="
                           relative
                           mx-[16px]
                           mt-[16px]
@@ -655,27 +645,27 @@ export default function MyPlanContent() {
                           lg:h-[86px]
                           lg:w-[150px]
                         "
-                      >
-                        <Image
-                          src={workout.image}
-                          alt={workout.name}
-                          fill
-                          sizes="
+                                            >
+                                                <Image
+                                                    src={workout.image}
+                                                    alt={workout.name}
+                                                    fill
+                                                    sizes="
                             (max-width: 767px) calc(100vw - 64px),
                             (max-width: 1023px) 122px,
                             150px
                           "
-                          className="
+                                                    className="
                             object-cover
                             transition-transform
                             duration-300
                             hover:scale-[1.03]
                           "
-                        />
-                      </Link>
+                                                />
+                                            </Link>
 
-                      <div
-                        className="
+                                            <div
+                                                className="
                           min-w-0
                           px-[16px]
                           py-[15px]
@@ -689,10 +679,10 @@ export default function MyPlanContent() {
 
                           lg:px-[18px]
                         "
-                      >
-                        <Link
-                          href={`/workout/${workout.id}`}
-                          className="
+                                            >
+                                                <Link
+                                                    href={`/workout/${workout.id}`}
+                                                    className="
                             block
                             w-fit
                             max-w-full
@@ -708,61 +698,61 @@ export default function MyPlanContent() {
 
                             lg:text-[17px]
                           "
-                        >
-                          {workout.name}
-                        </Link>
+                                                >
+                                                    {workout.name}
+                                                </Link>
 
-                        <p className="mt-[5px] truncate text-[11px] leading-none text-[#8B8E96] lg:text-[12px]">
-                          {workout.equipment}
-                        </p>
+                                                <p className="mt-[5px] truncate text-[11px] leading-none text-[#8B8E96] lg:text-[12px]">
+                                                    {workout.equipment}
+                                                </p>
 
-                        <div className="mt-[11px] flex flex-wrap items-center gap-x-[10px] gap-y-[7px] lg:gap-x-[14px]">
-                          <div className="flex items-center gap-[5px] whitespace-nowrap text-[10px] leading-none text-[#B2B4B9] lg:gap-[6px] lg:text-[12px]">
-                            <Clock3
-                              size={14}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                              className="shrink-0 text-[#CCFF00] lg:h-[15px] lg:w-[15px]"
-                            />
+                                                <div className="mt-[11px] flex flex-wrap items-center gap-x-[10px] gap-y-[7px] lg:gap-x-[14px]">
+                                                    <div className="flex items-center gap-[5px] whitespace-nowrap text-[10px] leading-none text-[#B2B4B9] lg:gap-[6px] lg:text-[12px]">
+                                                        <Clock3
+                                                            size={14}
+                                                            strokeWidth={2}
+                                                            aria-hidden="true"
+                                                            className="shrink-0 text-[#CCFF00] lg:h-[15px] lg:w-[15px]"
+                                                        />
 
-                            <span>
-                              {workout.duration} min
-                            </span>
-                          </div>
+                                                        <span>
+                                                            {workout.duration} min
+                                                        </span>
+                                                    </div>
 
-                          <div className="flex items-center gap-[5px] whitespace-nowrap text-[10px] leading-none text-[#B2B4B9] lg:gap-[6px] lg:text-[12px]">
-                            <Flame
-                              size={14}
-                              strokeWidth={1.8}
-                              fill="currentColor"
-                              aria-hidden="true"
-                              className="shrink-0 text-[#CCFF00] lg:h-[15px] lg:w-[15px]"
-                            />
+                                                    <div className="flex items-center gap-[5px] whitespace-nowrap text-[10px] leading-none text-[#B2B4B9] lg:gap-[6px] lg:text-[12px]">
+                                                        <Flame
+                                                            size={14}
+                                                            strokeWidth={1.8}
+                                                            fill="currentColor"
+                                                            aria-hidden="true"
+                                                            className="shrink-0 text-[#CCFF00] lg:h-[15px] lg:w-[15px]"
+                                                        />
 
-                            <span>
-                              {workout.caloriesBurned} kcal
-                            </span>
-                          </div>
+                                                        <span>
+                                                            {workout.caloriesBurned} kcal
+                                                        </span>
+                                                    </div>
 
-                          <div className="flex items-center gap-[5px] whitespace-nowrap text-[10px] leading-none text-[#B2B4B9] lg:gap-[6px] lg:text-[12px]">
-                            <Star
-                              size={14}
-                              strokeWidth={2}
-                              aria-hidden="true"
-                              className="shrink-0 text-[#CCFF00] lg:h-[15px] lg:w-[15px]"
-                            />
+                                                    <div className="flex items-center gap-[5px] whitespace-nowrap text-[10px] leading-none text-[#B2B4B9] lg:gap-[6px] lg:text-[12px]">
+                                                        <Star
+                                                            size={14}
+                                                            strokeWidth={2}
+                                                            aria-hidden="true"
+                                                            className="shrink-0 text-[#CCFF00] lg:h-[15px] lg:w-[15px]"
+                                                        />
 
-                            <span>
-                              {workout.rating}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
+                                                        <span>
+                                                            {workout.rating}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
 
-                      {/* ACTIONS */}
+                                            {/* ACTIONS */}
 
-                      <div
-                        className="
+                                            <div
+                                                className="
                           flex
                           min-w-0
                           items-center
@@ -782,10 +772,10 @@ export default function MyPlanContent() {
                           lg:pl-[12px]
                           lg:pr-[18px]
                         "
-                      >
-                        <Link
-                          href={`/workout/${workout.id}`}
-                          className="
+                                            >
+                                                <Link
+                                                    href={`/workout/${workout.id}`}
+                                                    className="
                             inline-flex
                             h-[36px]
                             shrink-0
@@ -812,17 +802,17 @@ export default function MyPlanContent() {
                             lg:px-[20px]
                             lg:text-[12px]
                           "
-                        >
-                          View Details
-                        </Link>
+                                                >
+                                                    View Details
+                                                </Link>
 
-                        {activeTab === "plan" && (
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleDone(workout)
-                            }
-                            className="
+                                                {activeTab === "plan" && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() =>
+                                                            handleDone(workout)
+                                                        }
+                                                        className="
                               inline-flex
                               h-[36px]
                               shrink-0
@@ -849,36 +839,36 @@ export default function MyPlanContent() {
                               lg:px-[20px]
                               lg:text-[12px]
                             "
-                          >
-                            <Check
-                              size={13}
-                              strokeWidth={3}
-                              aria-hidden="true"
-                              className="shrink-0"
-                            />
+                                                    >
+                                                        <Check
+                                                            size={13}
+                                                            strokeWidth={3}
+                                                            aria-hidden="true"
+                                                            className="shrink-0"
+                                                        />
 
-                            <span>
-                              Mark as Done
-                            </span>
-                          </button>
-                        )}
+                                                        <span>
+                                                            Mark as Done
+                                                        </span>
+                                                    </button>
+                                                )}
 
-                        <button
-                          type="button"
-                          onClick={() =>
-                            handleRemove(workout)
-                          }
-                          aria-label={
-                            activeTab === "plan"
-                              ? `Remove ${workout.name} from today's plan`
-                              : `Remove ${workout.name} from saved workouts`
-                          }
-                          title={
-                            activeTab === "plan"
-                              ? "Remove from plan"
-                              : "Remove from saved"
-                          }
-                          className="
+                                                <button
+                                                    type="button"
+                                                    onClick={() =>
+                                                        handleRemove(workout)
+                                                    }
+                                                    aria-label={
+                                                        activeTab === "plan"
+                                                            ? `Remove ${workout.name} from today's plan`
+                                                            : `Remove ${workout.name} from saved workouts`
+                                                    }
+                                                    title={
+                                                        activeTab === "plan"
+                                                            ? "Remove from plan"
+                                                            : "Remove from saved"
+                                                    }
+                                                    className="
                             ml-auto
                             flex
                             h-[30px]
@@ -897,21 +887,21 @@ export default function MyPlanContent() {
                             lg:h-[30px]
                             lg:w-[30px]
                           "
-                        >
-                          <X
-                            size={17}
-                            strokeWidth={1.8}
-                            aria-hidden="true"
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  </article>
-                )
-              )
-            ) : (
-              <div
-                className="
+                                                >
+                                                    <X
+                                                        size={17}
+                                                        strokeWidth={1.8}
+                                                        aria-hidden="true"
+                                                    />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </article>
+                                )
+                            )
+                        ) : (
+                            <div
+                                className="
                   flex
                   min-h-[220px]
                   flex-col
@@ -925,31 +915,31 @@ export default function MyPlanContent() {
                   py-12
                   text-center
                 "
-              >
-                {searchQuery ? (
-                  <>
-                    <Search
-                      size={25}
-                      strokeWidth={1.6}
-                      aria-hidden="true"
-                      className="text-[#626771]"
-                    />
+                            >
+                                {searchQuery ? (
+                                    <>
+                                        <Search
+                                            size={25}
+                                            strokeWidth={1.6}
+                                            aria-hidden="true"
+                                            className="text-[#626771]"
+                                        />
 
-                    <h2 className="font-display mt-4 text-[18px] font-semibold uppercase text-[#F4F4F5]">
-                      No workouts found
-                    </h2>
+                                        <h2 className="font-display mt-4 text-[18px] font-semibold uppercase text-[#F4F4F5]">
+                                            No workouts found
+                                        </h2>
 
-                    <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-[#777B84]">
-                      No workouts match &quot;
-                      {searchQuery}&quot;.
-                    </p>
+                                        <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-[#777B84]">
+                                            No workouts match &quot;
+                                            {searchQuery}&quot;.
+                                        </p>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setSearchQuery("")
-                      }
-                      className="
+                                        <button
+                                            type="button"
+                                            onClick={() =>
+                                                setSearchQuery("")
+                                            }
+                                            className="
                         mt-5
                         rounded-full
                         border
@@ -963,25 +953,25 @@ export default function MyPlanContent() {
                         hover:border-[#555B66]
                         hover:bg-[#20242B]
                       "
-                    >
-                      Clear Search
-                    </button>
-                  </>
-                ) : activeTab === "plan" ? (
-                  <>
-                    <h2 className="font-display text-[18px] font-semibold uppercase text-[#F4F4F5]">
-                      Your plan is empty
-                    </h2>
+                                        >
+                                            Clear Search
+                                        </button>
+                                    </>
+                                ) : activeTab === "plan" ? (
+                                    <>
+                                        <h2 className="font-display text-[18px] font-semibold uppercase text-[#F4F4F5]">
+                                            Your plan is empty
+                                        </h2>
 
-                    <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-[#777B84]">
-                      Add workouts from the
-                      library to build today&apos;s
-                      training plan.
-                    </p>
+                                        <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-[#777B84]">
+                                            Add workouts from the
+                                            library to build today&apos;s
+                                            training plan.
+                                        </p>
 
-                    <Link
-                      href="/#library"
-                      className="
+                                        <Link
+                                            href="/#library"
+                                            className="
                         mt-5
                         inline-flex
                         h-[40px]
@@ -996,25 +986,25 @@ export default function MyPlanContent() {
                         transition
                         hover:brightness-90
                       "
-                    >
-                      Browse Workouts
-                    </Link>
-                  </>
-                ) : (
-                  <>
-                    <h2 className="font-display text-[18px] font-semibold uppercase text-[#F4F4F5]">
-                      No saved workouts
-                    </h2>
+                                        >
+                                            Browse Workouts
+                                        </Link>
+                                    </>
+                                ) : (
+                                    <>
+                                        <h2 className="font-display text-[18px] font-semibold uppercase text-[#F4F4F5]">
+                                            No saved workouts
+                                        </h2>
 
-                    <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-[#777B84]">
-                      Save workouts from the
-                      library and they&apos;ll
-                      appear here.
-                    </p>
+                                        <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-[#777B84]">
+                                            Save workouts from the
+                                            library and they&apos;ll
+                                            appear here.
+                                        </p>
 
-                    <Link
-                      href="/#library"
-                      className="
+                                        <Link
+                                            href="/#library"
+                                            className="
                         mt-5
                         inline-flex
                         h-[40px]
@@ -1029,16 +1019,16 @@ export default function MyPlanContent() {
                         transition
                         hover:brightness-90
                       "
-                    >
-                      Browse Workouts
-                    </Link>
-                  </>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-    </main>
-  );
+                                        >
+                                            Browse Workouts
+                                        </Link>
+                                    </>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </section>
+        </main>
+    );
 }

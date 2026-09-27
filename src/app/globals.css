@@ -37,3 +37,15 @@ a {
 button {
   cursor: pointer;
 }
+
+
+/* Hide browser's native clear button on search inputs */
+input[type="search"]::-webkit-search-cancel-button,
+input[type="search"]::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="search"] {
+  appearance: textfield;
+}

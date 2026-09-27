@@ -8,7 +8,7 @@ export default async function WorkoutLibrary() {
     <section className="px-5 pb-20 pt-16 sm:px-6 lg:px-8">
       <div className="mx-auto max-w-[1200px]">
         {/* Section heading */}
-        <div className="mb-8">
+        {/* <div className="mb-8">
           <h2
             className="
               font-display
@@ -25,7 +25,7 @@ export default async function WorkoutLibrary() {
           <p className="mt-2 text-[13px] text-white/45">
             Twelve lifts covering every major muscle group.
           </p>
-        </div>
+        </div> */}
 
         <WorkoutLibraryClient workouts={workouts} />
       </div>
