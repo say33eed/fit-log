@@ -105,7 +105,7 @@ export default function MyPlanContent() {
         activeTab === "plan" ? plan : saved;
 
     /* =================================
-       LIVE DATA / SUMMARY
+       LIVE DATA
     ================================== */
 
     const summary = useMemo(() => {
