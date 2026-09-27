@@ -129,15 +129,11 @@ export default function WorkoutActions({
         <Bookmark
           size={16}
           strokeWidth={2}
-          fill={
-            saved
-              ? "currentColor"
-              : "none"
-          }
+          fill={saved ? "currentColor" : "none"}
         />
 
         {saved
-          ? "Saved"
+          ? "Saved for later"
           : "Save for later"}
       </button>
     </div>

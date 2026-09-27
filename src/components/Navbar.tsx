@@ -27,6 +27,60 @@ export default function Navbar() {
     setMenuOpen(false);
   };
 
+  /*
+   * FITLOG brand/logo
+   *
+   * When already on the homepage, manually
+   * scroll to the hero every time.
+   *
+   * This means it still works after:
+   * 1. clicking FITLOG once
+   * 2. scrolling down
+   * 3. clicking FITLOG again
+   */
+  const handleHomeClick = (
+    event: React.MouseEvent<HTMLAnchorElement>
+  ) => {
+    closeMenu();
+
+    if (pathname === "/") {
+      event.preventDefault();
+
+      const hero =
+        document.getElementById("hero");
+
+      if (hero) {
+        hero.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+
+        window.history.replaceState(
+          null,
+          "",
+          "/#hero"
+        );
+
+        return;
+      }
+
+      /*
+       * Fallback in case the hero element
+       * cannot be found.
+       */
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
+      window.history.replaceState(
+        null,
+        "",
+        "/#hero"
+      );
+    }
+  };
+
   const handleWorkoutsClick = (
     event: React.MouseEvent<HTMLAnchorElement>
   ) => {
@@ -130,8 +184,8 @@ export default function Navbar() {
 
         {/* Brand */}
         <Link
-          href="/"
-          onClick={closeMenu}
+          href="/#hero"
+          onClick={handleHomeClick}
           aria-label="Go to FitLog home"
           className="
             flex

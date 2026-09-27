@@ -1,7 +1,70 @@
+"use client";
+
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import type { MouseEvent } from "react";
 
 export default function Footer() {
+  const router = useRouter();
+
+  const handleHomeClick = (
+    event: MouseEvent<HTMLAnchorElement>
+  ) => {
+    event.preventDefault();
+
+    /*
+     * If we're already on the homepage,
+     * always scroll directly to the hero.
+     *
+     * This works even when the URL already
+     * contains #hero, so repeated clicks
+     * continue working.
+     */
+    if (window.location.pathname === "/") {
+      const hero = document.getElementById("hero");
+
+      if (hero) {
+        hero.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+
+        window.history.replaceState(
+          null,
+          "",
+          "/#hero"
+        );
+
+        return;
+      }
+
+      /*
+       * Fallback in case the hero element
+       * cannot be found for some reason.
+       */
+      window.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
+
+      window.history.replaceState(
+        null,
+        "",
+        "/#hero"
+      );
+
+      return;
+    }
+
+    /*
+     * If we're on another page such as
+     * /my-plan or /workout/[id], navigate
+     * back to the homepage hero.
+     */
+    router.push("/#hero");
+  };
+
   return (
     <footer
       className="
@@ -41,7 +104,8 @@ export default function Footer() {
       >
         {/* Brand */}
         <Link
-          href="/"
+          href="/#hero"
+          onClick={handleHomeClick}
           aria-label="FitLog home"
           className="
             flex

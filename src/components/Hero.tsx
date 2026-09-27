@@ -27,7 +27,10 @@ export default function Hero() {
   };
 
   return (
-    <section className="px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8">
+    <section
+      id="hero"
+      className="px-4 pt-6 sm:px-6 sm:pt-8 lg:px-8"
+    >
       <div
         className="
           mx-auto
