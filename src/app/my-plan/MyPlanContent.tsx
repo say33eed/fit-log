@@ -1,5 +1,6 @@
 "use client";
 
+import toast from "react-hot-toast";
 import { useMemo, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
@@ -79,15 +80,21 @@ export default function MyPlanContent() {
 
     const handleDone = (workout: Workout) => {
         removeFromPlan(workout.id);
+
+        toast.success("Workout marked as done");
     };
 
     const handleRemove = (workout: Workout) => {
         if (activeTab === "plan") {
             removeFromPlan(workout.id);
+
+            toast.success("Removed from today's plan");
             return;
         }
 
         toggleSaved(workout);
+
+        toast.success("Removed from saved");
     };
 
     /* =================================
@@ -184,20 +191,226 @@ export default function MyPlanContent() {
     if (!isLoaded) {
         return (
             <main className="min-h-screen bg-[#0D0F13] text-white">
-                <section className="px-4 py-8 sm:px-6 md:px-8 md:py-10 lg:py-12">
+                <section
+                    className="
+          px-4
+          pb-16
+          pt-8
+
+          sm:px-6
+          sm:pb-20
+          sm:pt-10
+
+          md:px-8
+
+          lg:pb-24
+          lg:pt-12
+        "
+                >
                     <div className="mx-auto max-w-[1200px]">
-                        <div className="h-9 w-40 animate-pulse rounded-lg bg-[#171A20]" />
+                        {/* Page heading */}
+                        <header>
+                            <h1
+                                className="
+                font-display
+                text-[28px]
+                font-semibold
+                uppercase
+                leading-none
+                tracking-[-0.01em]
+                text-[#F4F4F5]
 
-                        <div className="mt-3 h-4 w-[320px] max-w-full animate-pulse rounded bg-[#171A20]" />
+                sm:text-[30px]
+                lg:text-[32px]
+              "
+                            >
+                                MY PLAN
+                            </h1>
 
-                        <div className="mt-8 h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
+                            <p
+                                className="
+                mt-3
+                text-[12px]
+                leading-[1.6]
+                text-[#858991]
 
-                        <div className="mt-8 h-[42px] animate-pulse rounded-[10px] bg-[#171A20]" />
+                sm:text-[13px]
+              "
+                            >
+                                Cap of five lifts for today. Finish them, then load more.
+                            </p>
+                        </header>
 
-                        <div className="mt-6 space-y-3">
-                            <div className="h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
+                        {/* Live data skeleton */}
+                        <div
+                            className="
+              mt-7
+              grid
+              grid-cols-3
+              overflow-hidden
+              rounded-[16px]
+              border
+              border-[#252932]
+              bg-[#171A20]
 
-                            <div className="h-[118px] animate-pulse rounded-[16px] border border-[#252932] bg-[#171A20]" />
+              sm:mt-8
+            "
+                        >
+                            {/* Exercises */}
+                            <div
+                                className="
+                flex
+                min-w-0
+                flex-col
+                items-center
+                justify-center
+                px-2
+                py-5
+
+                sm:px-6
+                sm:py-6
+
+                lg:px-8
+                lg:py-7
+              "
+                            >
+                                <div className="h-[10px] w-[52px] animate-pulse rounded bg-[#252932]" />
+
+                                <div className="mt-3 h-[32px] w-[28px] animate-pulse rounded bg-[#252932]" />
+                            </div>
+
+                            {/* Minutes */}
+                            <div
+                                className="
+                flex
+                min-w-0
+                flex-col
+                items-center
+                justify-center
+                border-l
+                border-[#252932]
+                px-2
+                py-5
+
+                sm:px-6
+                sm:py-6
+
+                lg:px-8
+                lg:py-7
+              "
+                            >
+                                <div className="h-[10px] w-[45px] animate-pulse rounded bg-[#252932]" />
+
+                                <div className="mt-3 h-[32px] w-[42px] animate-pulse rounded bg-[#252932]" />
+                            </div>
+
+                            {/* Calories */}
+                            <div
+                                className="
+                flex
+                min-w-0
+                flex-col
+                items-center
+                justify-center
+                border-l
+                border-[#252932]
+                px-2
+                py-5
+
+                sm:px-6
+                sm:py-6
+
+                lg:px-8
+                lg:py-7
+              "
+                            >
+                                <div className="h-[10px] w-[48px] animate-pulse rounded bg-[#252932]" />
+
+                                <div className="mt-3 h-[32px] w-[50px] animate-pulse rounded bg-[#252932]" />
+                            </div>
+                        </div>
+
+                        {/* Controls skeleton */}
+                        <div
+                            className="
+              mt-6
+              flex
+              flex-col
+              gap-3
+
+              md:mt-7
+              md:flex-row
+              md:items-center
+              md:gap-3
+
+              lg:mt-8
+              lg:gap-5
+            "
+                        >
+                            {/* Tabs skeleton */}
+                            <div
+                                className="
+                h-[40px]
+                w-[175px]
+                shrink-0
+                animate-pulse
+                rounded-[10px]
+                bg-[#171A20]
+              "
+                            />
+
+                            {/* Search skeleton */}
+                            <div
+                                className="
+                h-[40px]
+                w-full
+                animate-pulse
+                rounded-[10px]
+                bg-[#171A20]
+
+                md:mx-auto
+                md:max-w-[360px]
+                md:flex-1
+              "
+                            />
+
+                            {/* Sort skeleton */}
+                            <div
+                                className="
+                flex
+                shrink-0
+                items-center
+                gap-3
+              "
+                            >
+                                <div className="h-[10px] w-[40px] animate-pulse rounded bg-[#171A20]" />
+
+                                <div className="h-[40px] w-[115px] animate-pulse rounded-[10px] bg-[#171A20]" />
+                            </div>
+                        </div>
+
+                        {/* Workout list loading */}
+                        <div
+                            className="
+              mt-5
+              flex
+              min-h-[120px]
+              items-center
+              justify-center
+
+              sm:mt-6
+            "
+                        >
+                            <p
+                                className="
+                text-[13px]
+                text-[#858991]
+
+                sm:text-[14px]
+              "
+                            >
+                                Loading workouts…
+                            </p>
                         </div>
                     </div>
                 </section>
@@ -537,8 +750,8 @@ export default function MyPlanContent() {
                                         strokeWidth={1.8}
                                         aria-hidden="true"
                                         className={`shrink-0 transition-transform ${sortOpen
-                                                ? "rotate-180"
-                                                : ""
+                                            ? "rotate-180"
+                                            : ""
                                             }`}
                                     />
                                 </button>
@@ -581,8 +794,8 @@ export default function MyPlanContent() {
                                                     setSortOpen(false);
                                                 }}
                                                 className={`block w-full rounded-[7px] px-3 py-2 text-left text-[12px] transition-colors ${sortBy === option
-                                                        ? "bg-[#292D35] text-white"
-                                                        : "text-[#A4A7AE] hover:bg-[#20242B] hover:text-white"
+                                                    ? "bg-[#292D35] text-white"
+                                                    : "text-[#A4A7AE] hover:bg-[#20242B] hover:text-white"
                                                     }`}
                                             >
                                                 {sortLabels[option]}
@@ -959,14 +1172,12 @@ export default function MyPlanContent() {
                                     </>
                                 ) : activeTab === "plan" ? (
                                     <>
-                                        <h2 className="font-display text-[18px] font-semibold uppercase text-[#F4F4F5]">
-                                            Your plan is empty
+                                        <h2 className="font-display text-[20px] tracking-[-0.6px] font-bold uppercase text-[#F4F4F5]">
+                                            NOTHING HERE YET
                                         </h2>
 
                                         <p className="mt-2 max-w-[380px] text-[13px] leading-relaxed text-[#777B84]">
-                                            Add workouts from the
-                                            library to build today&apos;s
-                                            training plan.
+                                            Browse the library and add a lift to get today moving.
                                         </p>
 
                                         <Link
@@ -987,7 +1198,7 @@ export default function MyPlanContent() {
                         hover:brightness-90
                       "
                                         >
-                                            Browse Workouts
+                                            Go to workouts
                                         </Link>
                                     </>
                                 ) : (
